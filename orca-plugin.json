@@ -3,7 +3,7 @@
   "id": "pr-dashboard",
   "publisher": "carlos-baixo",
   "name": "Pull Requests Dashboard",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "My open pull requests with status, next move owner, linked sessions, stacks, session cost and mute.",
   "engines": {
     "orca": ">=1.4.248"

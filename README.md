@@ -48,11 +48,21 @@ Click the sessions count on a pull request to see its worktrees and Claude Code 
 
 ## Install
 
-1. Clone this repository.
-2. In Orca, open Settings, Plugins, install from a local folder and pick the cloned folder.
-3. Accept the requested access: a background worker, notifications, storage, the sidebar panel and the status bar item.
+In Orca, open Settings, Plugins and install from this repository's URL, pinned to a release tag:
 
-Reinstall after changing the code, since Orca installs a hashed copy of the folder.
+```
+https://github.com/CarlosBaixoSI/orca-pr-dashboard#v1.1.0
+```
+
+Accept the requested access: a background worker, notifications, storage, the sidebar panel and the status bar item. Leave out `#v1.1.0` to follow `main` instead.
+
+### Releasing a new version
+
+1. Bump `version` in `orca-plugin.json` and commit.
+2. Tag the commit and push the tag: `git tag -a v1.2.0 -m v1.2.0 && git push origin v1.2.0`.
+3. Reinstall in Orca from `…#v1.2.0`.
+
+For local development, install from the cloned folder instead, and reinstall after each change, since Orca installs a hashed copy of the folder.
 
 ### Requirements
 

@@ -4,10 +4,12 @@ import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 import { mkdir, rename, writeFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
-import { runCommand } from './commands.mjs';
+import { runCommand, runJsonCommand } from './commands.mjs';
 import { startServer } from './server.mjs';
 
 const MAXIMUM_INDIVIDUAL_NOTIFICATIONS = 3;
+const PANEL_ID = 'pull-requests';
+const PLUGIN_ID = 'pr-dashboard';
 const PREFERRED_PORT = 47213;
 const PullRequestAction = { Discuss: 'discuss', Fix: 'fix', OpenInBrowser: 'open-in-browser', OpenInOrca: 'open-in-orca' };
 const REFRESH_INTERVAL_MILLISECONDS = 3 * 60 * 1000;
@@ -15,6 +17,21 @@ const RUNTIME = { dashboard: null, error: null, refreshing: null, server: null, 
 const STATUS_BAR_ITEM_ID = 'attention';
 const STATUS_FILE_PATH = join(homedir(), '.cache', 'orca-pr-dashboard', 'status.json');
 const StorageKey = { MutedUrls: 'mutedUrls', NotifiedSignatures: 'notifiedSignatures', Token: 'token' };
+
+/**
+ * Find this plugin's key, which Orca derives from where it was installed from.
+ */
+
+async function findPluginKey() {
+  const response = await runJsonCommand('orca', ['plugin', 'list', '--json']);
+  const plugin = response.result.plugins.find(item => item.pluginKey.endsWith(`.${PLUGIN_ID}`) && item.enabled !== false);
+
+  if (!plugin) {
+    throw new Error('Pull requests plugin is not installed');
+  }
+
+  return plugin.pluginKey;
+}
 
 /**
  * Write the attention count where the Claude Code status line can read it.
@@ -210,7 +227,7 @@ export default async function activate(context) {
 
   context.commands.register('open-pull-requests', () => openTab(dashboardUrl));
   context.commands.register('show-pull-requests-panel', async () => {
-    await runCommand('orca', ['plugin', 'open', 'carlos-baixo.pr-dashboard', '--panel', 'pull-requests', '--json']);
+    await runCommand('orca', ['plugin', 'open', await findPluginKey(), '--panel', PANEL_ID, '--json']);
 
     return { ok: true };
   });
