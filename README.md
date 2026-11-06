@@ -1,33 +1,83 @@
 # Pull Requests Dashboard for Orca
 
-Orca plugin that lists your open GitHub pull requests with:
+See every open pull request you own in one place: what state it is in, who has to move next and what the AI sessions behind it cost. From there, one click gets an agent working on it.
 
-- Status: draft, checks, review decision, conflicts, unreplied review threads.
-- Who owns the next move: you, reviewers or checks, with the reason.
-- Linked sessions: Orca worktrees on the pull request branch, plus Claude Code sessions that created the pull request or worked on its branch.
-- Stack view: pull requests based on another open pull request's branch are nested under it.
-- Session cost: estimated from the token usage in the linked Claude Code transcripts (see `src/pricing.mjs`).
-- Mute: muted pull requests are hidden, never counted and never notified.
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/dashboard-light.png">
+  <img alt="Pull requests dashboard showing pull requests grouped by repository with status chips, next move owner and session cost" src="docs/screenshots/dashboard-dark.png">
+</picture>
 
-A status bar item shows how many pull requests need your attention and opens the sidebar panel when clicked. A desktop notification also fires when a pull request starts needing your attention.
+> Screenshots use made up repositories and pull requests.
 
-## How it works
+## Features
 
-The plugin's background worker polls `gh` every 3 minutes and serves the page on `127.0.0.1:47213`. The "Open Pull Requests" command opens it in an Orca browser tab. API calls require a per-install token and a local `Host` header.
+- **Status at a glance:** checks, review decision, merge conflicts and unreplied review threads as chips.
+- **Next move:** who has to act (you, reviewers or checks) and why, such as "Resolve merge conflicts" or "Waiting for Platform Codeowners".
+- **Grouped and stacked:** pull requests are grouped by repository, and a pull request based on another open one is nested under it.
+- **Session cost:** estimated from the token usage in the linked Claude Code transcripts, per pull request and in total.
+- **Linked sessions:** the Orca worktrees on the pull request branch and the Claude Code sessions that worked on it.
+- **Filters:** All, My move, Waiting and Muted. Muted pull requests are never counted or notified.
+- **Status bar chip:** how many pull requests need you, always visible in Orca. Click it to open the sidebar panel.
+- **Notifications:** a desktop notification when a pull request starts needing your attention.
+- **Agent actions:** right click a pull request to start a Discuss or Fix workspace with Claude.
 
-The "Pull Requests" right sidebar panel shows the same page. In the panel the page talks to the worker through `orca.plugin.request`, since panel frames cannot reach the local server, and it updates on every refresh. Clicking a pull request opens it in the system browser. Right clicking one shows:
+## Sidebar panel
 
-- Open in browser / Open in Orca.
-- Discuss: a clean workspace in the pull request's Orca project, named after the pull request, with Claude.
-- Fix: a workspace in the pull request's Orca project, started from the pull request head and named after the pull request, with Claude and a prompt asking it to check the pull request state and propose fixes without pushing until approved.
+The same view lives in Orca's right sidebar, next to your work. On narrow widths each pull request wraps onto several lines.
 
-This relies on the worker being allowed to run `gh`, `orca` and a local server, which Orca does not guarantee.
+<img alt="Pull requests dashboard in Orca's right sidebar" src="docs/screenshots/sidebar-panel.png" width="380">
+
+## Right click actions
+
+<img alt="Right click menu with Open in browser, Open in Orca, Discuss and Fix" src="docs/screenshots/context-menu.png">
+
+Clicking a pull request opens it in the system browser. Right clicking one gives you:
+
+| Action | What it does |
+| --- | --- |
+| Open in browser | Opens the pull request in the system browser. |
+| Open in Orca | Opens the pull request in an Orca browser tab. |
+| Discuss | Creates a clean workspace in the pull request's Orca project, named after the pull request, with Claude. |
+| Fix | Creates a workspace from the pull request head, named after the pull request, with Claude and a prompt asking it to check the pull request state and propose the fixes. Claude does not commit or push until you approve. |
+
+## Linked sessions
+
+Click the sessions count on a pull request to see its worktrees and Claude Code sessions, with the cost of each.
+
+<img alt="Expanded list of linked sessions with their cost" src="docs/screenshots/sessions.png">
 
 ## Install
 
-Orca, Settings, Plugins, install from a local folder, pick this folder and accept the requested capabilities. Reinstall after changing the code, since Orca installs a hashed copy.
+1. Clone this repository.
+2. In Orca, open Settings, Plugins, install from a local folder and pick the cloned folder.
+3. Accept the requested access: a background worker, notifications, storage, the sidebar panel and the status bar item.
 
-## Requirements
+Reinstall after changing the code, since Orca installs a hashed copy of the folder.
 
-- `gh` signed in.
+### Requirements
+
+- Orca 1.4.248 or later.
+- [`gh`](https://cli.github.com) signed in.
 - Claude Code transcripts in `~/.claude/projects` for session links and cost. Codex and OpenCode sessions are not counted.
+- macOS for "Open in browser", which uses `open`.
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| Open Pull Requests | Opens the dashboard in an Orca browser tab. |
+| Show Pull Requests Panel | Opens the sidebar panel. The status bar chip runs this. |
+| Refresh Pull Requests | Refreshes now instead of waiting for the next poll. |
+
+## How it works
+
+The background worker polls `gh` every 3 minutes, links each pull request to its worktrees and sessions, and works out the next move.
+
+- **Browser tab:** the worker serves the page on `127.0.0.1:47213`. API calls require a per-install token and a local `Host` header.
+- **Sidebar panel:** the same page talks to the worker through `orca.plugin.request`, since panel frames cannot reach the local server, and updates on every refresh.
+- **Status bar:** the worker updates the chip with `statusBar.update` after every refresh and mute.
+- **Discuss and Fix:** the worker finds the Orca project whose remote matches the pull request repository and runs `orca worktree create` with Claude as the agent.
+
+Session costs use the prices in `src/pricing.mjs`.
+
+This relies on the worker being allowed to run `gh`, `git`, `orca` and a local server, which Orca does not guarantee.
