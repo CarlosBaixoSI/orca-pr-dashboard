@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pull Requests</title>
+<style>
+  :root {
+    --amber: #e3b341;
+    --amber-soft: rgba(227, 179, 65, 0.14);
+    --background: #ffffff;
+    --border: #d8dee4;
+    --chip: #f3f4f6;
+    --foreground: #1f2328;
+    --green: #1a7f37;
+    --green-soft: rgba(26, 127, 55, 0.1);
+    --muted: #656d76;
+    --red: #cf222e;
+    --red-soft: rgba(207, 34, 46, 0.1);
+    --selected: #eaeef2;
+    color-scheme: light dark;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --amber: #e3b341;
+      --amber-soft: rgba(227, 179, 65, 0.12);
+      --background: #0d1117;
+      --border: #21262d;
+      --chip: #161b22;
+      --foreground: #e6edf3;
+      --green: #3fb950;
+      --green-soft: rgba(63, 185, 80, 0.12);
+      --muted: #7d8590;
+      --red: #f85149;
+      --red-soft: rgba(248, 81, 73, 0.12);
+      --selected: #21262d;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  a { color: inherit; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  body { background: var(--background); color: var(--foreground); display: flex; flex-direction: column; font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; min-height: 100vh; }
+  button { align-items: center; background: transparent; border: 1px solid transparent; border-radius: 6px; color: var(--muted); cursor: pointer; display: inline-flex; font: inherit; gap: 6px; padding: 4px 10px; }
+  button:hover { color: var(--foreground); }
+  footer { background: var(--background); border-top: 1px solid var(--border); bottom: 0; color: var(--muted); font-size: 12px; padding: 8px 14px; position: sticky; }
+  h1 { font-size: 18px; font-weight: 600; margin: 0; }
+  header { align-items: center; background: var(--background); border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 8px 14px; padding: 12px 14px; position: sticky; top: 0; z-index: 1; }
+  main { flex: 1; padding: 4px 0 16px; }
+  svg { fill: none; flex: none; height: 14px; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; width: 14px; }
+  .arrow { color: var(--muted); }
+  .attention { background: var(--amber-soft); border-radius: 4px; color: var(--amber); font-size: 12px; font-weight: 600; padding: 2px 8px; }
+  .attention.clear { background: var(--green-soft); color: var(--green); }
+  .chip { align-items: center; background: var(--chip); border: 1px solid transparent; border-radius: 4px; color: var(--muted); display: inline-flex; font-size: 12px; gap: 5px; padding: 1px 8px; white-space: nowrap; }
+  .chip.amber { background: var(--amber-soft); color: var(--amber); }
+  .chip.green { background: var(--green-soft); color: var(--green); }
+  .chip.outline { background: transparent; border-color: var(--border); }
+  .chip.red { background: var(--red-soft); color: var(--red); }
+  .chips { align-items: center; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .cost { font-variant-numeric: tabular-nums; }
+  .empty { color: var(--muted); padding: 40px 14px; text-align: center; }
+  .error { background: var(--red-soft); border-radius: 6px; color: var(--red); margin: 10px 14px; padding: 8px 12px; }
+  .filters { align-items: center; display: flex; flex-wrap: wrap; gap: 2px; margin-left: auto; }
+  .filters button.selected { background: var(--selected); color: var(--foreground); }
+  .group { color: var(--muted); font-size: 12px; letter-spacing: 0.04em; padding: 16px 14px 4px; text-transform: uppercase; }
+  .menu { background: var(--chip); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); min-width: 180px; padding: 4px; position: fixed; z-index: 2; }
+  .menu button { border-radius: 4px; color: var(--foreground); justify-content: flex-start; padding: 6px 10px; width: 100%; }
+  .menu button:hover { background: var(--selected); }
+  .menu hr { border: 0; border-top: 1px solid var(--border); margin: 4px 0; }
+  .meta { align-items: center; color: var(--muted); display: flex; gap: 14px; }
+  .meta button { padding: 2px 4px; }
+  .number { color: var(--muted); font-size: 13px; margin-left: 6px; }
+  .pull-request { align-items: flex-start; display: grid; gap: 0 10px; grid-template-columns: auto minmax(0, 1fr) auto; padding: 8px 14px; }
+  .pull-request > div { min-width: 0; }
+  .pull-request.muted { opacity: 0.5; }
+  .pull-request > svg { color: var(--muted); height: 16px; margin-top: 3px; width: 16px; }
+  .reason { color: var(--foreground); }
+  .refresh { border-color: var(--border); }
+  .sessions { color: var(--muted); font-size: 12px; grid-column: 2 / -1; list-style: none; margin: 6px 0 0; padding: 0; }
+  .sessions li { display: flex; gap: 12px; justify-content: space-between; padding: 2px 0; }
+  .summary { color: var(--muted); }
+  .title { font-weight: 500; }
+  .toast { background: var(--chip); border: 1px solid var(--border); border-radius: 6px; bottom: 44px; left: 14px; padding: 6px 12px; position: fixed; right: 14px; z-index: 2; }
+  .toast.error { color: var(--red); }
+
+  @media (max-width: 560px) {
+    .filters { margin-left: 0; }
+    .meta { grid-column: 2 / -1; margin-top: 6px; }
+    .pull-request { grid-template-columns: auto minmax(0, 1fr); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Pull requests</h1>
+  <span id="attention" class="attention" hidden></span>
+  <span id="summary" class="summary"></span>
+  <nav id="filters" class="filters"></nav>
+</header>
+<main id="list"></main>
+<footer id="footer"></footer>
+<div id="menu" class="menu" hidden>
+  <button type="button" data-menu="open-in-browser">Open in browser</button>
+  <button type="button" data-menu="open-in-orca">Open in Orca</button>
+  <hr>
+  <button type="button" data-menu="discuss">Discuss</button>
+  <button type="button" data-menu="fix">Fix</button>
+</div>
+<div id="toast" class="toast" hidden></div>
+<script>
+  const ACTION_MESSAGES = { discuss: 'Creating a Discuss workspace…', fix: 'Creating a Fix workspace…' };
+  const ICONS = {
+    arrow: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+    bell: '<path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>',
+    bellOff: '<path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M17 17H4a1 1 0 0 1-.74-1.673C4.59 13.956 6 12.499 6 8a6 6 0 0 1 .258-1.742"/><path d="m2 2 20 20"/><path d="M8.668 3.01A6 6 0 0 1 18 8c0 2.687.77 4.653 1.707 6.05"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    comment: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+    eye: '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
+    failing: '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
+    pullRequest: '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M6 9v12"/>',
+    refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+    sessions: '<path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/>',
+    stacked: '<circle cx="6" cy="6" r="3"/><path d="M6 9v12"/><path d="M13 6h3a2 2 0 0 1 2 2v3"/><path d="M18 15v6"/><path d="M21 18h-6"/>',
+    user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'
+  };
+  const FILTER_KEY = 'filter';
+  const Filter = { All: 'all', Muted: 'muted', MyMove: 'my-move', Waiting: 'waiting' };
+  const ORCA_PLUGIN = window.orca?.plugin ?? null;
+  const OWNERS = { checks: ['', ICONS.clock, 'Checks'], reviewers: ['', ICONS.eye, 'Reviewers'], you: ['amber', ICONS.user, 'You'] };
+  const POLL_MILLISECONDS = 30000;
+  const TOAST_MILLISECONDS = 4000;
+  const TOKEN = new URLSearchParams(location.search).get('token') ?? '';
+  const expandedSessions = new Set();
+  let filter = readFilter();
+  let menuUrl = null;
+  let state = null;
+  let toastTimer = null;
+
+  /**
+   * Hide the right click menu.
+   */
+
+  function closeMenu() {
+    document.getElementById('menu').hidden = true;
+    menuUrl = null;
+  }
+
+  /**
+   * Escape a value for HTML.
+   */
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => `&#${character.charCodeAt(0)};`);
+  }
+
+  /**
+   * Format a cost in dollars.
+   */
+
+  function formatCost(cost) {
+    return cost > 0 ? `$${cost.toFixed(2)}` : '—';
+  }
+
+  /**
+   * Format a timestamp as minutes, hours or days ago.
+   */
+
+  function formatRelative(timestamp) {
+    if (!timestamp) {
+      return '';
+    }
+
+    const minutes = Math.max(0, Math.round((Date.now() - new Date(timestamp).getTime()) / 60000));
+
+    if (minutes < 60) {
+      return `${minutes}m ago`;
+    }
+
+    if (minutes < 60 * 24) {
+      return `${Math.round(minutes / 60)}h ago`;
+    }
+
+    return `${Math.round(minutes / (60 * 24))}d ago`;
+  }
+
+  /**
+   * Render an icon.
+   */
+
+  function icon(paths) {
+    return `<svg viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`;
+  }
+
+  /**
+   * Check whether a pull request passes the selected filter.
+   */
+
+  function matchesFilter(pullRequest) {
+    if (filter === Filter.Muted) {
+      return pullRequest.isMuted;
+    }
+
+    if (pullRequest.isMuted) {
+      return false;
+    }
+
+    if (filter === Filter.MyMove) {
+      return pullRequest.needsAttention;
+    }
+
+    if (filter === Filter.Waiting) {
+      return !pullRequest.needsAttention;
+    }
+
+    return true;
+  }
+
+  /**
+   * Read the saved filter.
+   */
+
+  function readFilter() {
+    try {
+      return Object.values(Filter).includes(localStorage.getItem(FILTER_KEY)) ? localStorage.getItem(FILTER_KEY) : Filter.All;
+    } catch {
+      return Filter.All;
+    }
+  }
+
+  /**
+   * Show the right click menu for a pull request at the pointer.
+   */
+
+  function openMenu(url, x, y) {
+    const menu = document.getElementById('menu');
+
+    menuUrl = url;
+    menu.hidden = false;
+    menu.style.left = `${Math.min(x, innerWidth - menu.offsetWidth - 8)}px`;
+    menu.style.top = `${Math.min(y, innerHeight - menu.offsetHeight - 8)}px`;
+  }
+
+  /**
+   * Render a chip.
+   */
+
+  function renderChip(kind, label, paths) {
+    return `<span class="chip ${kind}">${paths ? icon(paths) : ''}${escapeHtml(label)}</span>`;
+  }
+
+  /**
+   * Render the status chips, the owner of the next move and its reason.
+   */
+
+  function renderChips(pullRequest) {
+    const checks = { failing: ['red', 'Checks failing', ICONS.failing], passing: ['green', 'Checks passing', ICONS.check], pending: ['', 'Checks running', ICONS.clock] }[pullRequest.checks];
+    const [ownerKind, ownerIcon, ownerLabel] = OWNERS[pullRequest.nextMove.owner] ?? ['', null, pullRequest.nextMove.owner];
+    const review = { APPROVED: ['green', 'Approved'], CHANGES_REQUESTED: ['red', 'Changes requested'], REVIEW_REQUIRED: ['outline', 'Review required'] }[pullRequest.reviewDecision];
+    const chips = [];
+
+    if (pullRequest.isDraft) {
+      chips.push(renderChip('outline', 'Draft'));
+    }
+
+    if (checks) {
+      chips.push(renderChip(...checks));
+    }
+
+    if (review) {
+      chips.push(renderChip(...review));
+    }
+
+    if (pullRequest.hasConflicts) {
+      chips.push(renderChip('red', 'Conflicts'));
+    }
+
+    if (pullRequest.threadsAwaitingReply > 0) {
+      chips.push(renderChip('amber', pullRequest.threadsAwaitingReply, ICONS.comment));
+    }
+
+    chips.push(`<span class="arrow">${icon(ICONS.arrow)}</span>`);
+    chips.push(renderChip(ownerKind, ownerLabel, ownerIcon));
+    chips.push(`<span class="reason">${escapeHtml(pullRequest.nextMove.reason)}</span>`);
+
+    return `<div class="chips">${chips.join('')}</div>`;
+  }
+
+  /**
+   * Render the filter buttons and the refresh button.
+   */
+
+  function renderFilters() {
+    const mutedCount = state?.dashboard?.pullRequests.filter(pullRequest => pullRequest.isMuted).length ?? 0;
+    const options = [[Filter.All, 'All'], [Filter.MyMove, 'My move'], [Filter.Waiting, 'Waiting'], [Filter.Muted, `${icon(ICONS.bellOff)}Muted (${mutedCount})`]];
+
+    document.getElementById('filters').innerHTML = `${options
+      .map(([value, label]) => `<button type="button" data-filter="${value}" class="${value === filter ? 'selected' : ''}">${label}</button>`)
+      .join('')}<button type="button" class="refresh" data-action="refresh" ${state?.refreshing ? 'disabled' : ''}>${icon(ICONS.refresh)}${state?.refreshing ? 'Refreshing…' : 'Refresh'}</button>`;
+  }
+
+  /**
+   * Render one pull request row.
+   */
+
+  function renderPullRequest(pullRequest, depth) {
+    const sessions = expandedSessions.has(pullRequest.url)
+      ? `<ul class="sessions">${pullRequest.worktrees.length ? `<li>Worktrees: ${pullRequest.worktrees.map(worktree => escapeHtml(worktree.name)).join(', ')}</li>` : ''}${
+          pullRequest.sessions.map(session => `<li><span>${escapeHtml(session.title)} · ${escapeHtml(formatRelative(session.lastActivityAt))}</span><span class="cost">${formatCost(session.cost)}</span></li>`).join('') ||
+          '<li>No linked Claude Code sessions.</li>'
+        }</ul>`
+      : '';
+    const shortRepository = pullRequest.repository.split('/').pop();
+
+    return `<article class="pull-request ${pullRequest.isMuted ? 'muted' : ''}" style="padding-left: ${14 + depth * 30}px">
+      ${icon(depth > 0 ? ICONS.stacked : ICONS.pullRequest)}
+      <div>
+        <a class="title" href="${escapeHtml(pullRequest.url)}" target="_blank" rel="noreferrer" data-url="${escapeHtml(pullRequest.url)}">${escapeHtml(pullRequest.title)}</a><span class="number">${escapeHtml(shortRepository)}#${pullRequest.number}</span>
+        ${renderChips(pullRequest)}
+      </div>
+      <div class="meta">
+        <span class="cost" title="Estimated from linked Claude Code transcripts">${formatCost(pullRequest.cost)}</span>
+        <button type="button" data-action="sessions" data-url="${escapeHtml(pullRequest.url)}" title="Linked sessions">${icon(ICONS.sessions)}${pullRequest.sessions.length}</button>
+        <button type="button" data-action="mute" data-url="${escapeHtml(pullRequest.url)}" data-muted="${pullRequest.isMuted}" title="${pullRequest.isMuted ? 'Unmute' : 'Mute'}">${icon(pullRequest.isMuted ? ICONS.bellOff : ICONS.bell)}</button>
+      </div>
+      ${sessions}
+    </article>`;
+  }
+
+  /**
+   * Render a pull request and the ones stacked on it.
+   */
+
+  function renderTree(pullRequest, childrenByParent, depth) {
+    const children = childrenByParent.get(pullRequest.url) ?? [];
+
+    return `${renderPullRequest(pullRequest, depth)}${children.map(child => renderTree(child, childrenByParent, depth + 1)).join('')}`;
+  }
+
+  /**
+   * Render the whole page.
+   */
+
+  function render() {
+    const attention = document.getElementById('attention');
+    const dashboard = state?.dashboard;
+    const list = document.getElementById('list');
+
+    renderFilters();
+    document.getElementById('footer').textContent = dashboard ? `Updated ${formatRelative(dashboard.refreshedAt)} · refreshes every 3 minutes` : '';
+
+    if (!dashboard) {
+      attention.hidden = true;
+      list.innerHTML = state?.error ? `<div class="error">${escapeHtml(state.error)}</div>` : '<div class="empty">Loading pull requests…</div>';
+
+      return;
+    }
+
+    const visible = dashboard.pullRequests.filter(matchesFilter);
+    const byUrl = new Map(visible.map(pullRequest => [pullRequest.url, pullRequest]));
+    const childrenByParent = new Map();
+    const groups = new Map();
+    const totalCost = dashboard.pullRequests.reduce((total, pullRequest) => total + pullRequest.cost, 0);
+
+    for (const pullRequest of [...visible].sort((first, second) => second.updatedAt.localeCompare(first.updatedAt))) {
+      if (pullRequest.parentUrl && byUrl.has(pullRequest.parentUrl)) {
+        childrenByParent.set(pullRequest.parentUrl, [...(childrenByParent.get(pullRequest.parentUrl) ?? []), pullRequest]);
+      } else {
+        groups.set(pullRequest.repository, [...(groups.get(pullRequest.repository) ?? []), pullRequest]);
+      }
+    }
+
+    attention.hidden = false;
+    attention.textContent = dashboard.attentionCount > 0 ? `${dashboard.attentionCount} need${dashboard.attentionCount === 1 ? 's' : ''} attention` : 'Nothing needs you';
+    attention.classList.toggle('clear', dashboard.attentionCount === 0);
+    document.getElementById('summary').textContent = totalCost > 0 ? `${formatCost(totalCost)} across linked sessions` : '';
+    list.innerHTML = `${state.error ? `<div class="error">Last refresh failed: ${escapeHtml(state.error)}</div>` : ''}${
+      [...groups].map(([repository, roots]) => `<div class="group">${escapeHtml(repository)}</div>${roots.map(root => renderTree(root, childrenByParent, 0)).join('')}`).join('') ||
+      '<div class="empty">No pull requests here.</div>'
+    }`;
+  }
+
+  /**
+   * Call the worker: through the panel bridge in the sidebar, or the local server in a browser tab.
+   */
+
+  async function request(name, input) {
+    if (ORCA_PLUGIN) {
+      return ORCA_PLUGIN.request(name, input);
+    }
+
+    const routes = { 'dashboard.refresh': ['POST', '/api/refresh'], 'dashboard.state': ['GET', '/api/state'], 'pull-request.action': ['POST', '/api/action'], 'pull-request.mute': ['POST', '/api/mute'] };
+    const [method, path] = routes[name];
+    const response = await fetch(path, {
+      body: input ? JSON.stringify(input) : undefined,
+      headers: { 'content-type': 'application/json', 'x-dashboard-token': TOKEN },
+      method
+    });
+
+    if (!response.ok) {
+      throw new Error((await response.json()).error ?? response.statusText);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Run a pull request action and tell the user how it went.
+   */
+
+  async function runAction(action, url) {
+    if (ACTION_MESSAGES[action]) {
+      showToast(ACTION_MESSAGES[action]);
+    }
+
+    try {
+      await request('pull-request.action', { action, url });
+
+      if (ACTION_MESSAGES[action]) {
+        showToast('Workspace created.');
+      }
+    } catch (error) {
+      showToast(error.message, true);
+    }
+  }
+
+  /**
+   * Run a worker call and render its state.
+   */
+
+  async function load(name = 'dashboard.state', input) {
+    try {
+      state = await request(name, input);
+    } catch (error) {
+      state = { ...state, error: error.message };
+    }
+
+    render();
+  }
+
+  /**
+   * Show a short message above the footer.
+   */
+
+  function showToast(message, isError = false) {
+    const toast = document.getElementById('toast');
+
+    clearTimeout(toastTimer);
+    toast.classList.toggle('error', isError);
+    toast.hidden = false;
+    toast.textContent = message;
+    toastTimer = setTimeout(() => (toast.hidden = true), TOAST_MILLISECONDS);
+  }
+
+  /**
+   * Save the selected filter.
+   */
+
+  function writeFilter(value) {
+    try {
+      localStorage.setItem(FILTER_KEY, value);
+    } catch {}
+  }
+
+  document.body.addEventListener('click', event => {
+    const button = event.target.closest('button');
+    const link = event.target.closest('a[data-url]');
+
+    if (button?.dataset.menu) {
+      const url = menuUrl;
+
+      closeMenu();
+      runAction(button.dataset.menu, url);
+
+      return;
+    }
+
+    closeMenu();
+
+    if (link) {
+      event.preventDefault();
+      runAction('open-in-browser', link.dataset.url);
+
+      return;
+    }
+
+    if (!button) {
+      return;
+    }
+
+    if (button.dataset.filter) {
+      filter = button.dataset.filter;
+      writeFilter(filter);
+      render();
+
+      return;
+    }
+
+    if (button.dataset.action === 'refresh') {
+      state = { ...state, refreshing: true };
+      render();
+      load('dashboard.refresh');
+
+      return;
+    }
+
+    if (button.dataset.action === 'sessions') {
+      expandedSessions.has(button.dataset.url) ? expandedSessions.delete(button.dataset.url) : expandedSessions.add(button.dataset.url);
+      render();
+
+      return;
+    }
+
+    if (button.dataset.action === 'mute') {
+      load('pull-request.mute', { muted: button.dataset.muted !== 'true', url: button.dataset.url });
+    }
+  });
+
+  document.body.addEventListener('contextmenu', event => {
+    const pullRequest = event.target.closest('.pull-request');
+
+    if (!pullRequest) {
+      closeMenu();
+
+      return;
+    }
+
+    event.preventDefault();
+    openMenu(pullRequest.querySelector('a[data-url]').dataset.url, event.clientX, event.clientY);
+  });
+  document.addEventListener('keydown', event => event.key === 'Escape' && closeMenu());
+  window.addEventListener('blur', closeMenu);
+
+  if (ORCA_PLUGIN) {
+    ORCA_PLUGIN.on('dashboard.changed', nextState => {
+      state = nextState;
+      render();
+    });
+  }
+
+  setInterval(ORCA_PLUGIN ? render : load, POLL_MILLISECONDS);
+  load();
+</script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+{
+  "manifestVersion": 1,
+  "id": "pr-dashboard",
+  "publisher": "carlos-baixo",
+  "name": "Pull Requests Dashboard",
+  "version": "1.0.0",
+  "description": "My open pull requests with status, next move owner, linked sessions, stacks, session cost and mute.",
+  "engines": {
+    "orca": ">=1.4.248"
+  },
+  "pluginApi": 1,
+  "main": "src/main.mjs",
+  "contributes": {
+    "commands": [
+      {
+        "id": "open-pull-requests",
+        "title": "Open Pull Requests",
+        "context": "global"
+      },
+      {
+        "id": "refresh-pull-requests",
+        "title": "Refresh Pull Requests",
+        "context": "global"
+      },
+      {
+        "id": "show-pull-requests-panel",
+        "title": "Show Pull Requests Panel",
+        "context": "global"
+      }
+    ],
+    "panels": [
+      {
+        "id": "pull-requests",
+        "title": "Pull Requests",
+        "icon": "branch",
+        "entry": "src/page.html"
+      }
+    ],
+    "statusBarItems": [
+      {
+        "id": "attention",
+        "icon": "branch",
+        "text": "PRs",
+        "tooltip": "Pull requests that need your attention. Click to open the panel.",
+        "command": "show-pull-requests-panel"
+      }
+    ]
+  },
+  "capabilities": [
+    {
+      "kind": "notifications:show"
+    },
+    {
+      "kind": "storage:own"
+    }
+  ]
+}
