@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 import { mkdir, rename, writeFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
-import { runCommand, runJsonCommand } from './commands.mjs';
+import { copyToClipboard, runCommand, runJsonCommand } from './commands.mjs';
 import { startServer } from './server.mjs';
 
 const DEFAULT_AGENT = 'claude';
@@ -12,7 +12,7 @@ const MAXIMUM_INDIVIDUAL_NOTIFICATIONS = 3;
 const PANEL_ID = 'pull-requests';
 const PLUGIN_ID = 'pr-dashboard';
 const PREFERRED_PORT = 47213;
-const PullRequestAction = { Discuss: 'discuss', Fix: 'fix', OpenInBrowser: 'open-in-browser', OpenInOrca: 'open-in-orca' };
+const PullRequestAction = { CopyLink: 'copy-link', Discuss: 'discuss', Fix: 'fix', OpenInBrowser: 'open-in-browser', OpenInOrca: 'open-in-orca' };
 const REFRESH_INTERVAL_MILLISECONDS = 3 * 60 * 1000;
 const RUNTIME = { dashboard: null, error: null, refreshing: null, server: null, timer: null };
 const STATUS_BAR_ITEM_ID = 'attention';
@@ -157,11 +157,12 @@ export default async function activate(context) {
   }
 
   /**
-   * Run a pull request action from the page: open it, or start a Discuss or Fix workspace.
+   * Run a pull request action from the page: open it, copy its link, or start a Discuss or Fix workspace.
    */
 
   async function runPullRequestAction(action, url) {
     const actions = {
+      [PullRequestAction.CopyLink]: pullRequest => copyToClipboard(pullRequest.url),
       [PullRequestAction.Discuss]: async pullRequest => createDiscussWorkspace(pullRequest, await readAgent()),
       [PullRequestAction.Fix]: async pullRequest => createFixWorkspace(pullRequest, await readAgent()),
       [PullRequestAction.OpenInBrowser]: pullRequest => runCommand('open', [pullRequest.url]),

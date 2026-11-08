@@ -7,6 +7,18 @@ const TIMEOUT_MILLISECONDS = 60_000;
 const execFileAsync = promisify(execFile);
 
 /**
+ * Copy text to the clipboard.
+ */
+
+export function copyToClipboard(text) {
+  return new Promise((resolve, reject) => {
+    const child = execFile('pbcopy', error => (error ? reject(error) : resolve()));
+
+    child.stdin.end(text);
+  });
+}
+
+/**
  * Run a command line tool and return its standard output, with the usual binary folders on the path.
  */
 
