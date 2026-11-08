@@ -53,10 +53,10 @@ Click the sessions count on a pull request to see its worktrees and agent sessio
 In Orca, open Settings, Plugins and install from this repository's URL, pinned to a release tag:
 
 ```
-https://github.com/CarlosBaixoSI/orca-pr-dashboard#v1.2.0
+https://github.com/CarlosBaixoSI/orca-pr-dashboard#v1.3.0
 ```
 
-Accept the requested access: a background worker, notifications, storage, settings, the sidebar panel and the status bar item. Leave out `#v1.2.0` to follow `master` instead.
+Accept the requested access: a background worker, notifications, storage, settings, the sidebar panel and the status bar item. Leave out `#v1.3.0` to follow `master` instead.
 
 ### Releasing a new version
 
