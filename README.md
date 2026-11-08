@@ -29,7 +29,7 @@ The same view lives in Orca's right sidebar, next to your work. On narrow widths
 
 ## Right click actions
 
-<img alt="Right click menu with Open in browser, Open in Orca, Discuss and Fix" src="docs/screenshots/context-menu.png">
+<img alt="Right click menu with Open in browser, Open in Orca, Discuss, Fix, Copy PR link and Mute notifications" src="docs/screenshots/context-menu.png">
 
 Clicking a pull request opens it in the system browser. Right clicking one gives you:
 
@@ -39,6 +39,8 @@ Clicking a pull request opens it in the system browser. Right clicking one gives
 | Open in Orca | Opens the pull request in an Orca browser tab. |
 | Discuss | Creates a clean workspace in the pull request's Orca project, named after the pull request, with your agent. |
 | Fix | Creates a workspace from the pull request head, named after the pull request, with your agent and a prompt asking it to check the pull request state and propose the fixes. The agent is told not to commit or push until you approve. |
+| Copy PR link | Copies the pull request URL to the clipboard. |
+| Mute notifications | Mutes the pull request, or unmutes it if it is already muted. |
 
 ## Linked sessions
 
