@@ -1,4 +1,38 @@
+import { AGENT_NAMES } from './agents/names.mjs';
 import { runCommand, runJsonCommand } from './commands.mjs';
+
+const AGENT_CHECK_TIMEOUT_MILLISECONDS = 10_000;
+const AGENT_COMMANDS = {
+  claude: ['claude'],
+  codex: ['codex'],
+  copilot: ['copilot'],
+  cursor: ['cursor-agent', 'agent'],
+  gemini: ['gemini'],
+  opencode: ['opencode']
+};
+const COMMAND_NOT_FOUND_EXIT_CODE = 1;
+const DEFAULT_SHELL = '/bin/zsh';
+
+/**
+ * Refuse to start a workspace when the agent's command is missing from the login shell a new terminal uses.
+ * When the shell itself fails or takes too long, the check is skipped and the launch goes ahead.
+ */
+
+async function assertAgentInstalled(agent) {
+  const commands = AGENT_COMMANDS[agent];
+
+  if (!commands) {
+    return;
+  }
+
+  try {
+    await runCommand(process.env.SHELL || DEFAULT_SHELL, ['-ilc', commands.map(command => `command -v ${command}`).join(' || ')], { timeoutMilliseconds: AGENT_CHECK_TIMEOUT_MILLISECONDS });
+  } catch (error) {
+    if (error.code === COMMAND_NOT_FOUND_EXIT_CODE) {
+      throw new Error(`${AGENT_NAMES[agent]} is not installed: no ${commands.join(' or ')} command found. Install it or pick another agent in the plugin settings.`);
+    }
+  }
+}
 
 /**
  * Build the prompt that asks the agent to review the pull request state and propose fixes.
@@ -33,10 +67,12 @@ async function findRepository(pullRequest) {
 }
 
 /**
- * Open a clean workspace in the pull request project, with Claude, named after the pull request.
+ * Open a clean workspace in the pull request project, with the given agent, named after the pull request.
  */
 
-export async function createDiscussWorkspace(pullRequest) {
+export async function createDiscussWorkspace(pullRequest, agent) {
+  await assertAgentInstalled(agent);
+
   const repository = await findRepository(pullRequest);
 
   return runJsonCommand('orca', [
@@ -44,7 +80,7 @@ export async function createDiscussWorkspace(pullRequest) {
     '--repo', `id:${repository.id}`,
     '--name', pullRequest.title,
     '--no-parent',
-    '--agent', 'claude',
+    '--agent', agent,
     '--reference', pullRequest.url,
     '--activate',
     '--json'
@@ -52,10 +88,12 @@ export async function createDiscussWorkspace(pullRequest) {
 }
 
 /**
- * Open a workspace on the pull request head, with Claude, and send it the fix prompt.
+ * Open a workspace on the pull request head, with the given agent, and send it the fix prompt.
  */
 
-export async function createFixWorkspace(pullRequest) {
+export async function createFixWorkspace(pullRequest, agent) {
+  await assertAgentInstalled(agent);
+
   const repository = await findRepository(pullRequest);
 
   await runCommand('git', ['-C', repository.path, 'fetch', 'origin', pullRequest.headBranch]);
@@ -66,7 +104,7 @@ export async function createFixWorkspace(pullRequest) {
     '--name', pullRequest.title,
     '--no-parent',
     '--base-branch', `origin/${pullRequest.headBranch}`,
-    '--agent', 'claude',
+    '--agent', agent,
     '--prompt', buildFixPrompt(pullRequest),
     '--reference', pullRequest.url,
     '--activate',

@@ -307,8 +307,8 @@
   function renderPullRequest(pullRequest, depth) {
     const sessions = expandedSessions.has(pullRequest.url)
       ? `<ul class="sessions">${pullRequest.worktrees.length ? `<li>Worktrees: ${pullRequest.worktrees.map(worktree => escapeHtml(worktree.name)).join(', ')}</li>` : ''}${
-          pullRequest.sessions.map(session => `<li><span>${escapeHtml(session.title)} · ${escapeHtml(formatRelative(session.lastActivityAt))}</span><span class="cost">${formatCost(session.cost)}</span></li>`).join('') ||
-          '<li>No linked Claude Code sessions.</li>'
+          pullRequest.sessions.map(session => `<li><span>${escapeHtml(session.agentName)} · ${escapeHtml(session.title)} · ${escapeHtml(formatRelative(session.lastActivityAt))}</span><span class="cost">${formatCost(session.cost)}</span></li>`).join('') ||
+          '<li>No linked agent sessions.</li>'
         }</ul>`
       : '';
     const shortRepository = pullRequest.repository.split('/').pop();
@@ -320,7 +320,7 @@
         ${renderChips(pullRequest)}
       </div>
       <div class="meta">
-        <span class="cost" title="Estimated from linked Claude Code transcripts">${formatCost(pullRequest.cost)}</span>
+        <span class="cost" title="Estimated from linked agent transcripts">${formatCost(pullRequest.cost)}</span>
         <button type="button" data-action="sessions" data-url="${escapeHtml(pullRequest.url)}" title="Linked sessions">${icon(ICONS.sessions)}${pullRequest.sessions.length}</button>
         <button type="button" data-action="mute" data-url="${escapeHtml(pullRequest.url)}" data-muted="${pullRequest.isMuted}" title="${pullRequest.isMuted ? 'Unmute' : 'Mute'}">${icon(pullRequest.isMuted ? ICONS.bellOff : ICONS.bell)}</button>
       </div>

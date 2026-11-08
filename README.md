@@ -14,12 +14,12 @@ See every open pull request you own in one place: what state it is in, who has t
 - **Status at a glance:** checks, review decision, merge conflicts and unreplied review threads as chips.
 - **Next move:** who has to act (you, reviewers or checks) and why, such as "Resolve merge conflicts" or "Waiting for Platform Codeowners".
 - **Grouped and stacked:** pull requests are grouped by repository, and a pull request based on another open one is nested under it.
-- **Session cost:** estimated from the token usage in the linked Claude Code transcripts, per pull request and in total.
-- **Linked sessions:** the Orca worktrees on the pull request branch and the Claude Code sessions that worked on it.
+- **Session cost:** estimated from the token usage in the linked Claude Code and Codex transcripts, per pull request and in total.
+- **Linked sessions:** the Orca worktrees on the pull request branch and the Claude Code and Codex sessions that worked on it.
 - **Filters:** All, My move, Waiting and Muted. Muted pull requests are never counted or notified.
 - **Status bar chip:** how many pull requests need you, always visible in Orca. Click it to open the sidebar panel.
 - **Notifications:** a desktop notification when a pull request starts needing your attention.
-- **Agent actions:** right click a pull request to start a Discuss or Fix workspace with Claude.
+- **Agent actions:** right click a pull request to start a Discuss or Fix workspace with the agent you pick in Settings.
 
 ## Sidebar panel
 
@@ -37,12 +37,12 @@ Clicking a pull request opens it in the system browser. Right clicking one gives
 | --- | --- |
 | Open in browser | Opens the pull request in the system browser. |
 | Open in Orca | Opens the pull request in an Orca browser tab. |
-| Discuss | Creates a clean workspace in the pull request's Orca project, named after the pull request, with Claude. |
-| Fix | Creates a workspace from the pull request head, named after the pull request, with Claude and a prompt asking it to check the pull request state and propose the fixes. Claude does not commit or push until you approve. |
+| Discuss | Creates a clean workspace in the pull request's Orca project, named after the pull request, with your agent. |
+| Fix | Creates a workspace from the pull request head, named after the pull request, with your agent and a prompt asking it to check the pull request state and propose the fixes. The agent is told not to commit or push until you approve. |
 
 ## Linked sessions
 
-Click the sessions count on a pull request to see its worktrees and Claude Code sessions, with the cost of each.
+Click the sessions count on a pull request to see its worktrees and agent sessions, with the agent and cost of each.
 
 <img alt="Expanded list of linked sessions with their cost" src="docs/screenshots/sessions.png">
 
@@ -54,7 +54,7 @@ In Orca, open Settings, Plugins and install from this repository's URL, pinned t
 https://github.com/CarlosBaixoSI/orca-pr-dashboard#v1.1.0
 ```
 
-Accept the requested access: a background worker, notifications, storage, the sidebar panel and the status bar item. Leave out `#v1.1.0` to follow `main` instead.
+Accept the requested access: a background worker, notifications, storage, settings, the sidebar panel and the status bar item. Leave out `#v1.1.0` to follow `main` instead.
 
 ### Releasing a new version
 
@@ -68,8 +68,16 @@ For local development, install from the cloned folder instead, and reinstall aft
 
 - Orca 1.4.248 or later.
 - [`gh`](https://cli.github.com) signed in.
-- Claude Code transcripts in `~/.claude/projects` for session links and cost. Codex and OpenCode sessions are not counted.
+- Agent transcripts for session links and cost: Claude Code in `~/.claude/projects` and Codex in `~/.codex/sessions` (or `$CODEX_HOME/sessions`). Other agents' sessions are not counted.
 - macOS for "Open in browser", which uses `open`.
+
+## Settings
+
+| Setting | What it does |
+| --- | --- |
+| Agent for Discuss and Fix | The agent the Discuss and Fix workspaces start with: Claude Code (default), Codex, GitHub Copilot, Cursor, Gemini or OpenCode. |
+
+Before creating a workspace, Discuss and Fix check that the agent's command is installed, looking it up in your login shell like a new terminal does. When it is missing, the plugin shows an error and creates nothing.
 
 ## Commands
 
@@ -86,8 +94,12 @@ The background worker polls `gh` every 3 minutes, links each pull request to its
 - **Browser tab:** the worker serves the page on `127.0.0.1:47213`. API calls require a per-install token and a local `Host` header.
 - **Sidebar panel:** the same page talks to the worker through `orca.plugin.request`, since panel frames cannot reach the local server, and updates on every refresh.
 - **Status bar:** the worker updates the chip with `statusBar.update` after every refresh and mute.
-- **Discuss and Fix:** the worker finds the Orca project whose remote matches the pull request repository and runs `orca worktree create` with Claude as the agent.
+- **Discuss and Fix:** the worker finds the Orca project whose remote matches the pull request repository and runs `orca worktree create` with the agent from Settings.
 
-Session costs use the prices in `src/pricing.mjs`.
+### Agent sessions
+
+Each supported agent has a module in `src/agents/` that reads its transcripts into the same shape: id, working folder, branches, pull request URLs, title, last activity and cost. A session links to a pull request when it recorded the pull request URL, or when it worked on the pull request branch inside one of the repository's worktrees. Only Claude Code records pull request URLs, so Codex sessions link by branch.
+
+Session costs use the Claude and OpenAI prices in `src/pricing.mjs`. Codex logs do not report cache writes, so its cost leaves them out. A model missing from the table counts as $0. To support another agent, add a module to `src/agents/` and list it in `src/sessions.mjs`.
 
 This relies on the worker being allowed to run `gh`, `git`, `orca` and a local server, which Orca does not guarantee.

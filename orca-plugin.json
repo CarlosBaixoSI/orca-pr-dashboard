@@ -44,11 +44,25 @@
         "tooltip": "Pull requests that need your attention. Click to open the panel.",
         "command": "show-pull-requests-panel"
       }
+    ],
+    "settings": [
+      {
+        "key": "agent",
+        "title": "Agent for Discuss and Fix",
+        "description": "The agent that Discuss and Fix workspaces start with.",
+        "type": "string",
+        "default": "claude",
+        "enum": ["claude", "codex", "copilot", "cursor", "gemini", "opencode"],
+        "enumLabels": ["Claude Code", "Codex", "GitHub Copilot", "Cursor", "Gemini", "OpenCode"]
+      }
     ]
   },
   "capabilities": [
     {
       "kind": "notifications:show"
+    },
+    {
+      "kind": "settings:own"
     },
     {
       "kind": "storage:own"

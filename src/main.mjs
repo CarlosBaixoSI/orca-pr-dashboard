@@ -7,6 +7,7 @@ import { randomBytes } from 'node:crypto';
 import { runCommand, runJsonCommand } from './commands.mjs';
 import { startServer } from './server.mjs';
 
+const DEFAULT_AGENT = 'claude';
 const MAXIMUM_INDIVIDUAL_NOTIFICATIONS = 3;
 const PANEL_ID = 'pull-requests';
 const PLUGIN_ID = 'pr-dashboard';
@@ -16,6 +17,7 @@ const REFRESH_INTERVAL_MILLISECONDS = 3 * 60 * 1000;
 const RUNTIME = { dashboard: null, error: null, refreshing: null, server: null, timer: null };
 const STATUS_BAR_ITEM_ID = 'attention';
 const STATUS_FILE_PATH = join(homedir(), '.cache', 'orca-pr-dashboard', 'status.json');
+const SettingKey = { Agent: 'agent' };
 const StorageKey = { MutedUrls: 'mutedUrls', NotifiedSignatures: 'notifiedSignatures', Token: 'token' };
 
 /**
@@ -34,7 +36,7 @@ async function findPluginKey() {
 }
 
 /**
- * Write the attention count where the Claude Code status line can read it.
+ * Write the attention count where an agent status line can read it.
  */
 
 async function writeStatusFile(dashboard) {
@@ -93,6 +95,20 @@ export default async function activate(context) {
   }
 
   /**
+   * Read the agent that Discuss and Fix workspaces start with, or the default one when the settings cannot be read.
+   */
+
+  async function readAgent() {
+    try {
+      const { settings } = await context.host.call('settings.get');
+
+      return settings?.[SettingKey.Agent] || DEFAULT_AGENT;
+    } catch {
+      return DEFAULT_AGENT;
+    }
+  }
+
+  /**
    * Rebuild the dashboard, sharing one refresh between concurrent callers.
    */
 
@@ -146,8 +162,8 @@ export default async function activate(context) {
 
   async function runPullRequestAction(action, url) {
     const actions = {
-      [PullRequestAction.Discuss]: createDiscussWorkspace,
-      [PullRequestAction.Fix]: createFixWorkspace,
+      [PullRequestAction.Discuss]: async pullRequest => createDiscussWorkspace(pullRequest, await readAgent()),
+      [PullRequestAction.Fix]: async pullRequest => createFixWorkspace(pullRequest, await readAgent()),
       [PullRequestAction.OpenInBrowser]: pullRequest => runCommand('open', [pullRequest.url]),
       [PullRequestAction.OpenInOrca]: pullRequest => openTab(pullRequest.url)
     };
