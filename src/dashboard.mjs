@@ -1,3 +1,4 @@
+import { AGENT_NAMES } from './agents/names.mjs';
 import { deriveNextMove, fetchPullRequests, Owner } from './github.mjs';
 import { listSessions, listWorktrees } from './sessions.mjs';
 
@@ -45,7 +46,7 @@ export async function buildDashboard(mutedUrls) {
 }
 
 /**
- * Find the Claude Code sessions that created the pull request or worked on its branch.
+ * Find the agent sessions that created the pull request or worked on its branch.
  */
 
 function findSessions(pullRequest, sessions, repositoryFolders) {
@@ -62,6 +63,7 @@ function findSessions(pullRequest, sessions, repositoryFolders) {
       );
     })
     .map(session => ({
+      agentName: AGENT_NAMES[session.agent] ?? session.agent,
       cost: session.cost,
       id: session.id,
       lastActivityAt: session.lastActivityAt,

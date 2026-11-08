@@ -10,12 +10,12 @@ const execFileAsync = promisify(execFile);
  * Run a command line tool and return its standard output, with the usual binary folders on the path.
  */
 
-export async function runCommand(command, commandArguments) {
+export async function runCommand(command, commandArguments, { timeoutMilliseconds = TIMEOUT_MILLISECONDS } = {}) {
   const path = [process.env.PATH, ...EXTRA_PATHS].filter(Boolean).join(':');
   const { stdout } = await execFileAsync(command, commandArguments, {
     env: { ...process.env, PATH: path },
     maxBuffer: MAXIMUM_OUTPUT_BYTES,
-    timeout: TIMEOUT_MILLISECONDS
+    timeout: timeoutMilliseconds
   });
 
   return stdout;
