@@ -84,6 +84,15 @@
   .chip.red::before { background: var(--red); }
   .chips { align-items: center; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
   .cost { color: var(--foreground); font-family: var(--font-mono); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .dialog { background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: var(--shadow); color: var(--body); max-height: calc(100vh - 32px); max-width: 640px; overflow: auto; padding: 0; width: calc(100% - 32px); }
+  .dialog .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+  .dialog .actions .reset { margin-right: auto; }
+  .dialog h2 { color: var(--foreground); font-size: 14px; font-weight: 600; margin: 0 0 4px; }
+  .dialog label { color: var(--secondary); display: block; font-size: 12px; font-weight: 500; margin-top: 12px; }
+  .dialog textarea { background: var(--subpanel); border: 1px solid var(--border); border-radius: 6px; color: var(--foreground); display: block; font: 12px/1.5 var(--font-mono); margin-top: 6px; min-height: 140px; padding: 8px 10px; resize: vertical; width: 100%; }
+  .dialog textarea:focus { border-color: var(--border-strong); outline: none; }
+  .dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
+  .dialog-body { padding: 16px; }
   .empty { color: var(--muted); padding: 40px 14px; text-align: center; }
   .error { background: color-mix(in srgb, var(--red) 12%, transparent); border: 1px solid color-mix(in srgb, var(--red) 30%, transparent); border-radius: 6px; color: var(--red); margin: 10px 14px; padding: 8px 12px; }
   .filters { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
@@ -92,6 +101,8 @@
   .group svg { color: var(--muted); }
   .group svg:first-child { transition: transform 0.15s; }
   .group.collapsed svg:first-child { transform: rotate(-90deg); }
+  .hint { color: var(--muted); font-size: 12px; margin: 0; }
+  .hint code { font-family: var(--font-mono); }
   .kind { align-items: center; background: var(--tint); border: 1px solid var(--border-strong); border-radius: 4px; color: var(--muted); display: flex; height: 20px; justify-content: center; margin-top: 1px; width: 20px; }
   .kind svg { height: 13px; width: 13px; }
   .menu { background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: var(--shadow); min-width: 200px; padding: 4px; position: fixed; z-index: 2; }
@@ -111,6 +122,8 @@
   .pull-request:hover { background: var(--surface-hover); border-color: var(--border-strong); }
   .pull-request > div { min-width: 0; }
   .pull-request.muted { opacity: 0.5; }
+  .primary { background: var(--accent); color: var(--accent-foreground); font-size: 12px; font-weight: 600; padding: 4px 12px; }
+  .primary:hover { color: var(--accent-foreground); opacity: 0.9; }
   .refresh, .repository-filter, .resume { background: var(--tint); border-color: var(--border-strong); color: var(--foreground); font-size: 12px; font-weight: 500; padding: 4px 12px; }
   .refresh svg, .repository-filter svg, .resume svg { color: var(--muted); }
   .refresh:hover, .repository-filter:hover, .resume:hover { background: var(--tint-strong); }
@@ -160,11 +173,14 @@
 <footer id="footer"></footer>
 <div id="menu" class="menu" hidden></div>
 <div id="repositories" class="menu" hidden></div>
+<dialog id="dialog" class="dialog"></dialog>
 <div id="toast" class="toast" hidden></div>
 <script>
   const ACTION_DONE_MESSAGES = { 'copy-link': 'Link copied.', discuss: 'Workspace created.', fix: 'Workspace created.', resume: 'Workspace opened.' };
   const ACTION_MESSAGES = { discuss: 'Creating a Discuss workspace…', fix: 'Creating a Fix workspace…', resume: 'Opening the workspace…' };
   const COLLAPSED_REPOSITORIES_KEY = 'collapsedRepositories';
+  const DIALOG_ACTIONS = { cancel: closeDialog, reset: resetPrompts, save: savePrompts, start: startWorkspace };
+  const DIALOG_TITLES = { discuss: 'Discuss', fix: 'Fix' };
   const ICONS = {
     arrow: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
     bell: '<path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>',
@@ -178,6 +194,7 @@
     eye: '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
     filter: '<path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>',
     orca: '<circle cx="12" cy="12" r="9"/><path d="m10 9 5 3-5 3V9z" fill="currentColor"/>',
+    pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>',
     play: '<path d="M6 3v18l14-9z"/>',
     pullRequest: '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M6 9v12"/>',
     refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
@@ -192,6 +209,7 @@
   const MenuAction = { CopyLink: 'copy-link', Discuss: 'discuss', Fix: 'fix', Mute: 'mute', OpenInBrowser: 'open-in-browser', OpenInOrca: 'open-in-orca', Resume: 'resume' };
   const ORCA_PLUGIN = window.orca?.plugin ?? null;
   const OWNERS = { checks: ['', ICONS.clock, 'Checks'], reviewers: ['', ICONS.eye, 'Reviewers'], you: ['you', null, 'You'] };
+  const PLACEHOLDERS = ['baseBranch', 'headBranch', 'number', 'reference', 'repository', 'title', 'url'];
   const POLL_MILLISECONDS = 30000;
   const SELECTED_REPOSITORIES_KEY = 'selectedRepositories';
   const TOAST_MILLISECONDS = 4000;
@@ -199,11 +217,22 @@
   const collapsedRepositories = new Set(readList(COLLAPSED_REPOSITORIES_KEY));
   const expandedSessions = new Set();
   const selectedRepositories = new Set(readList(SELECTED_REPOSITORIES_KEY));
+  let dialogLaunch = null;
   let filter = readFilter();
   let menuPullRequest = null;
+  let promptDefaults = {};
   let query = '';
   let state = null;
   let toastTimer = null;
+
+  /**
+   * Close the prompt dialog.
+   */
+
+  function closeDialog() {
+    document.getElementById('dialog').close();
+    dialogLaunch = null;
+  }
 
   /**
    * Hide the right click menu.
@@ -341,6 +370,36 @@
   }
 
   /**
+   * Fill in the Discuss or Fix prompt for a pull request and open it for editing before the workspace starts.
+   */
+
+  async function openLaunchDialog(action, pullRequest) {
+    try {
+      const { prompt } = await request('pull-request.prompt', { action, url: pullRequest.url });
+
+      showDialog(renderLaunchDialog(action, pullRequest, prompt));
+      dialogLaunch = { action, url: pullRequest.url };
+    } catch (error) {
+      showToast(error.message, true);
+    }
+  }
+
+  /**
+   * Open the Discuss and Fix prompt templates for editing.
+   */
+
+  async function openPromptsDialog() {
+    try {
+      const { defaults, prompts } = await request('prompts.get');
+
+      promptDefaults = defaults;
+      showDialog(renderPromptsDialog(prompts));
+    } catch (error) {
+      showToast(error.message, true);
+    }
+  }
+
+  /**
    * Show the repository filter menu under its button.
    */
 
@@ -422,7 +481,7 @@
 
     document.getElementById('filters').innerHTML = `<span class="segments">${options
       .map(([value, label]) => `<button type="button" data-filter="${value}" class="${value === filter ? 'selected' : ''}">${label}</button>`)
-      .join('')}</span><button type="button" class="refresh" data-action="refresh" ${state?.refreshing ? 'disabled' : ''}>${icon(ICONS.refresh)}${state?.refreshing ? 'Refreshing…' : 'Refresh'}</button>`;
+      .join('')}</span><button type="button" class="refresh" data-action="prompts" title="Edit the Discuss and Fix prompts">${icon(ICONS.pencil)}Prompts</button><button type="button" class="refresh" data-action="refresh" ${state?.refreshing ? 'disabled' : ''}>${icon(ICONS.refresh)}${state?.refreshing ? 'Refreshing…' : 'Refresh'}</button>`;
   }
 
   /**
@@ -436,6 +495,17 @@
     return `<button type="button" class="group ${isCollapsed ? 'collapsed' : ''}" data-action="toggle-group" data-repository="${escapeHtml(repository)}" aria-expanded="${!isCollapsed}">${icon(ICONS.chevron)}${icon(ICONS.repository)}${escapeHtml(repository)}<span class="count">${count}</span></button>${
       isCollapsed ? '' : roots.map(root => renderTree(root, childrenByParent, 0)).join('')
     }`;
+  }
+
+  /**
+   * Render the dialog that edits the Discuss or Fix prompt for one pull request before its workspace starts.
+   */
+
+  function renderLaunchDialog(action, pullRequest, prompt) {
+    return `<h2>${DIALOG_TITLES[action]}: ${escapeHtml(pullRequest.title)}</h2>
+      <p class="hint">This prompt is only for this workspace. Change the template in Prompts. Leave it empty to start the agent without a prompt.</p>
+      <textarea name="prompt" rows="14" aria-label="Prompt">${escapeHtml(prompt)}</textarea>
+      <div class="actions"><button type="button" class="refresh" data-dialog="cancel">Cancel</button><button type="button" class="primary" data-dialog="start">Start workspace</button></div>`;
   }
 
   /**
@@ -456,6 +526,18 @@
     ];
 
     return items.map(item => (item ? `<button type="button" data-menu="${item[0]}">${icon(item[1])}${item[2]}</button>` : '<hr>')).join('');
+  }
+
+  /**
+   * Render the dialog that edits the Discuss and Fix prompt templates.
+   */
+
+  function renderPromptsDialog(prompts) {
+    return `<h2>Prompts</h2>
+      <p class="hint">Sent to the agent when a Discuss or Fix workspace starts. Placeholders: ${PLACEHOLDERS.map(placeholder => `<code>{${placeholder}}</code>`).join(' ')}. Leave a prompt empty to start the agent without one.</p>
+      <label>Fix<textarea name="fix" rows="10">${escapeHtml(prompts.fix)}</textarea></label>
+      <label>Discuss<textarea name="discuss" rows="6">${escapeHtml(prompts.discuss)}</textarea></label>
+      <div class="actions"><button type="button" class="refresh reset" data-dialog="reset">Reset to defaults</button><button type="button" class="refresh" data-dialog="cancel">Cancel</button><button type="button" class="primary" data-dialog="save">Save</button></div>`;
   }
 
   /**
@@ -573,7 +655,15 @@
       return ORCA_PLUGIN.request(name, input);
     }
 
-    const routes = { 'dashboard.refresh': ['POST', '/api/refresh'], 'dashboard.state': ['GET', '/api/state'], 'pull-request.action': ['POST', '/api/action'], 'pull-request.mute': ['POST', '/api/mute'] };
+    const routes = {
+      'dashboard.refresh': ['POST', '/api/refresh'],
+      'dashboard.state': ['GET', '/api/state'],
+      'prompts.get': ['GET', '/api/prompts'],
+      'prompts.save': ['POST', '/api/prompts'],
+      'pull-request.action': ['POST', '/api/action'],
+      'pull-request.mute': ['POST', '/api/mute'],
+      'pull-request.prompt': ['POST', '/api/prompt']
+    };
     const [method, path] = routes[name];
     const response = await fetch(path, {
       body: input ? JSON.stringify(input) : undefined,
@@ -592,13 +682,13 @@
    * Run a pull request action and tell the user how it went.
    */
 
-  async function runAction(action, url) {
+  async function runAction(action, url, prompt) {
     if (ACTION_MESSAGES[action]) {
       showToast(ACTION_MESSAGES[action]);
     }
 
     try {
-      await request('pull-request.action', { action, url });
+      await request('pull-request.action', { action, prompt, url });
 
       if (ACTION_DONE_MESSAGES[action]) {
         showToast(ACTION_DONE_MESSAGES[action]);
@@ -615,6 +705,12 @@
   function runMenuAction(action, pullRequest) {
     if (action === MenuAction.Mute) {
       load('pull-request.mute', { muted: !pullRequest.isMuted, url: pullRequest.url });
+
+      return;
+    }
+
+    if (DIALOG_TITLES[action]) {
+      openLaunchDialog(action, pullRequest);
 
       return;
     }
@@ -637,6 +733,50 @@
   }
 
   /**
+   * Put the default Discuss and Fix templates back in the prompts dialog, without saving them.
+   */
+
+  function resetPrompts() {
+    const dialog = document.getElementById('dialog');
+
+    dialog.querySelector('[name="discuss"]').value = promptDefaults.discuss ?? '';
+    dialog.querySelector('[name="fix"]').value = promptDefaults.fix ?? '';
+  }
+
+  /**
+   * Save the Discuss and Fix templates from the prompts dialog.
+   */
+
+  async function savePrompts() {
+    const dialog = document.getElementById('dialog');
+
+    try {
+      await request('prompts.save', { discuss: dialog.querySelector('[name="discuss"]').value, fix: dialog.querySelector('[name="fix"]').value });
+      closeDialog();
+      showToast('Prompts saved.');
+    } catch (error) {
+      showToast(error.message, true);
+    }
+  }
+
+  /**
+   * Show the prompt dialog with the given content.
+   */
+
+  function showDialog(content) {
+    const dialog = document.getElementById('dialog');
+
+    dialog.innerHTML = `<div class="dialog-body">${content}</div>`;
+    dialogLaunch = null;
+
+    if (!dialog.open) {
+      dialog.showModal();
+    }
+
+    dialog.querySelector('textarea')?.focus();
+  }
+
+  /**
    * Show a short message above the footer.
    */
 
@@ -648,6 +788,18 @@
     toast.hidden = false;
     toast.textContent = message;
     toastTimer = setTimeout(() => (toast.hidden = true), TOAST_MILLISECONDS);
+  }
+
+  /**
+   * Start the Discuss or Fix workspace with the prompt from the dialog.
+   */
+
+  function startWorkspace() {
+    const { action, url } = dialogLaunch;
+    const prompt = document.getElementById('dialog').querySelector('[name="prompt"]').value;
+
+    closeDialog();
+    runAction(action, url, prompt);
   }
 
   /**
@@ -691,6 +843,18 @@
   document.body.addEventListener('click', event => {
     const button = event.target.closest('button');
     const link = event.target.closest('a[data-url]');
+
+    if (event.target.id === 'dialog') {
+      closeDialog();
+
+      return;
+    }
+
+    if (button?.dataset.dialog) {
+      DIALOG_ACTIONS[button.dataset.dialog]();
+
+      return;
+    }
 
     if (button?.dataset.repositoryOption !== undefined) {
       toggleRepository(button.dataset.repositoryOption);
@@ -745,6 +909,12 @@
       return;
     }
 
+    if (button.dataset.action === 'prompts') {
+      openPromptsDialog();
+
+      return;
+    }
+
     if (button.dataset.action === 'resume') {
       runAction(MenuAction.Resume, button.dataset.url);
 
@@ -791,6 +961,7 @@
       closeRepositoryMenu();
     }
   });
+  document.getElementById('dialog').addEventListener('close', () => (dialogLaunch = null));
   document.getElementById('search').addEventListener('input', event => {
     query = event.target.value;
     render();

@@ -5,6 +5,7 @@ import { homedir } from 'node:os';
 import { mkdir, rename, writeFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { copyToClipboard, runCommand, runJsonCommand } from './commands.mjs';
+import { DEFAULT_PROMPTS, fillPrompt } from './prompts.mjs';
 import { startServer } from './server.mjs';
 
 const DEFAULT_AGENT = 'claude';
@@ -18,7 +19,7 @@ const RUNTIME = { dashboard: null, error: null, refreshing: null, server: null, 
 const STATUS_BAR_ITEM_ID = 'attention';
 const STATUS_FILE_PATH = join(homedir(), '.cache', 'orca-pr-dashboard', 'status.json');
 const SettingKey = { Agent: 'agent' };
-const StorageKey = { MutedUrls: 'mutedUrls', NotifiedSignatures: 'notifiedSignatures', Token: 'token' };
+const StorageKey = { MutedUrls: 'mutedUrls', NotifiedSignatures: 'notifiedSignatures', Prompts: 'prompts', Token: 'token' };
 
 /**
  * Find this plugin's key, which Orca derives from where it was installed from.
@@ -95,6 +96,42 @@ export default async function activate(context) {
   }
 
   /**
+   * Find a pull request on the dashboard by URL.
+   */
+
+  function findPullRequest(url) {
+    const pullRequest = RUNTIME.dashboard?.pullRequests.find(item => item.url === url);
+
+    if (!pullRequest) {
+      throw new Error('Unknown pull request');
+    }
+
+    return pullRequest;
+  }
+
+  /**
+   * Return the default and the saved Discuss and Fix prompt templates.
+   */
+
+  async function getPrompts() {
+    return { defaults: DEFAULT_PROMPTS, prompts: await readPrompts() };
+  }
+
+  /**
+   * Return the Discuss or Fix prompt filled in for a pull request.
+   */
+
+  async function getPullRequestPrompt(action, url) {
+    const prompts = await readPrompts();
+
+    if (!Object.hasOwn(prompts, action)) {
+      throw new Error('Unknown prompt');
+    }
+
+    return { prompt: fillPrompt(prompts[action], findPullRequest(url)) };
+  }
+
+  /**
    * Read the agent that Discuss and Fix workspaces start with, or the default one when the settings cannot be read.
    */
 
@@ -106,6 +143,14 @@ export default async function activate(context) {
     } catch {
       return DEFAULT_AGENT;
     }
+  }
+
+  /**
+   * Read the Discuss and Fix prompt templates, falling back to the default for any not customized.
+   */
+
+  async function readPrompts() {
+    return { ...DEFAULT_PROMPTS, ...((await storage.get(StorageKey.Prompts)) ?? {}) };
   }
 
   /**
@@ -158,25 +203,26 @@ export default async function activate(context) {
 
   /**
    * Run a pull request action from the page: open it, copy its link, start a Discuss or Fix workspace, or resume a linked one.
+   * A Discuss or Fix workspace gets the given prompt, or its template filled in when none is given.
    * A new workspace triggers a refresh, so the page can offer to resume it.
    */
 
-  async function runPullRequestAction(action, url) {
+  async function runPullRequestAction(action, url, prompt) {
+    const resolvePrompt = async () => prompt ?? (await getPullRequestPrompt(action, url)).prompt;
     const actions = {
       [PullRequestAction.CopyLink]: pullRequest => copyToClipboard(pullRequest.url),
-      [PullRequestAction.Discuss]: async pullRequest => createDiscussWorkspace(pullRequest, await readAgent()),
-      [PullRequestAction.Fix]: async pullRequest => createFixWorkspace(pullRequest, await readAgent()),
+      [PullRequestAction.Discuss]: async pullRequest => createDiscussWorkspace(pullRequest, await readAgent(), await resolvePrompt()),
+      [PullRequestAction.Fix]: async pullRequest => createFixWorkspace(pullRequest, await readAgent(), await resolvePrompt()),
       [PullRequestAction.OpenInBrowser]: pullRequest => runCommand('open', [pullRequest.url]),
       [PullRequestAction.OpenInOrca]: pullRequest => openTab(pullRequest.url),
       [PullRequestAction.Resume]: pullRequest => resumeWorkspace(pullRequest)
     };
-    const pullRequest = RUNTIME.dashboard?.pullRequests.find(item => item.url === url);
 
-    if (!pullRequest || !actions[action]) {
-      throw new Error('Unknown pull request or action');
+    if (!actions[action]) {
+      throw new Error('Unknown action');
     }
 
-    await actions[action](pullRequest);
+    await actions[action](findPullRequest(url));
 
     if ([PullRequestAction.Discuss, PullRequestAction.Fix].includes(action)) {
       refresh();
@@ -211,6 +257,26 @@ export default async function activate(context) {
   }
 
   /**
+   * Save the Discuss and Fix prompt templates, keeping only the ones that differ from the default.
+   */
+
+  async function savePrompts(input) {
+    const prompts = {};
+
+    for (const key of Object.keys(DEFAULT_PROMPTS)) {
+      const value = String(input?.[key] ?? DEFAULT_PROMPTS[key]);
+
+      if (value !== DEFAULT_PROMPTS[key]) {
+        prompts[key] = value;
+      }
+    }
+
+    await storage.set(StorageKey.Prompts, prompts);
+
+    return getPrompts();
+  }
+
+  /**
    * Mute or unmute a pull request.
    */
 
@@ -239,8 +305,11 @@ export default async function activate(context) {
   RUNTIME.server = await startServer({
     getState,
     onAction: runPullRequestAction,
+    onGetPrompts: getPrompts,
     onMute: setMuted,
+    onPrompt: getPullRequestPrompt,
     onRefresh: refresh,
+    onSavePrompts: savePrompts,
     preferredPort: PREFERRED_PORT,
     token
   });
@@ -260,9 +329,12 @@ export default async function activate(context) {
     return { attentionCount: state.dashboard?.attentionCount ?? null, error: state.error };
   });
   context.panels.handle('dashboard.refresh', () => refresh());
-  context.panels.handle('pull-request.action', ({ action, url }) => runPullRequestAction(String(action), String(url)));
   context.panels.handle('dashboard.state', () => getState());
+  context.panels.handle('prompts.get', () => getPrompts());
+  context.panels.handle('prompts.save', input => savePrompts(input));
+  context.panels.handle('pull-request.action', ({ action, prompt, url }) => runPullRequestAction(String(action), String(url), typeof prompt === 'string' ? prompt : undefined));
   context.panels.handle('pull-request.mute', ({ muted, url }) => setMuted(String(url), Boolean(muted)));
+  context.panels.handle('pull-request.prompt', ({ action, url }) => getPullRequestPrompt(String(action), String(url)));
   context.log(`Pull requests dashboard on port ${RUNTIME.server.port}`);
 
   refresh();

@@ -22,7 +22,8 @@ See every open pull request you own in one place: what state it is in, who has t
 - **Resume:** a pull request with a linked Orca workspace gets a Resume button that opens its most recently active one.
 - **Status bar chip:** how many pull requests need you, always visible in Orca. Click it to open the sidebar panel.
 - **Notifications:** a desktop notification when a pull request starts needing your attention.
-- **Agent actions:** right click a pull request to start a Discuss or Fix workspace with the agent you pick in Settings.
+- **Agent actions:** right click a pull request to start a Discuss or Fix workspace with the agent you pick in Settings. The prompt opens for editing before the workspace starts.
+- **Editable prompts:** the Prompts button edits the Discuss and Fix prompt templates.
 
 ## Sidebar panel
 
@@ -41,8 +42,8 @@ Clicking a pull request opens it in the system browser. Right clicking one gives
 | Open in browser | Opens the pull request in the system browser. |
 | Open in Orca | Opens the pull request in an Orca browser tab. |
 | Resume | Opens the most recently active Orca workspace linked to the pull request. Only shown when there is one. |
-| Discuss | Creates a clean workspace in the pull request's Orca project, named after the pull request, with your agent. |
-| Fix | Creates a workspace from the pull request head, named after the pull request, with your agent and a prompt asking it to check the pull request state and propose the fixes. The agent is told not to commit or push until you approve. |
+| Discuss | Creates a clean workspace in the pull request's Orca project, named after the pull request, with your agent and the Discuss prompt, which is empty by default. |
+| Fix | Creates a workspace from the pull request head, named after the pull request, with your agent and the Fix prompt. By default it asks the agent to check the pull request state and propose the fixes, and not to commit or push until you approve. |
 | Copy PR link | Copies the pull request URL to the clipboard. |
 | Mute notifications | Mutes the pull request, or unmutes it if it is already muted. |
 
@@ -84,6 +85,24 @@ For local development, install from the cloned folder instead, and reinstall aft
 | Agent for Discuss and Fix | The agent the Discuss and Fix workspaces start with: Claude Code (default), Codex, GitHub Copilot, Cursor, Gemini or OpenCode. |
 
 Before creating a workspace, Discuss and Fix check that the agent's command is installed, looking it up in your login shell like a new terminal does. When it is missing, the plugin shows an error and creates nothing.
+
+## Prompts
+
+Discuss and Fix fill in their prompt template for the pull request and open it in a dialog. Edit it for that workspace only, then click Start workspace. An empty prompt starts the agent without one.
+
+Click Prompts in the header to change the templates. These placeholders are replaced with the pull request values:
+
+| Placeholder | Value |
+| --- | --- |
+| `{baseBranch}` | The branch the pull request merges into. |
+| `{headBranch}` | The pull request branch. |
+| `{number}` | The pull request number. |
+| `{reference}` | The repository and number, such as `acme/api#12`. |
+| `{repository}` | The repository, such as `acme/api`. |
+| `{title}` | The pull request title. |
+| `{url}` | The pull request URL. |
+
+Reset to defaults puts back the built in templates. A template you have not changed follows the default in later versions.
 
 ## Commands
 

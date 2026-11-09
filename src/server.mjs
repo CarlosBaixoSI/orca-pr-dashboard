@@ -62,7 +62,7 @@ function listen(server, preferredPort) {
  * Every API call must carry the session token, and the host header must be local, to block other websites.
  */
 
-export async function startServer({ getState, onAction, onMute, onRefresh, preferredPort, token }) {
+export async function startServer({ getState, onAction, onGetPrompts, onMute, onPrompt, onRefresh, onSavePrompts, preferredPort, token }) {
   let port = preferredPort;
 
   const server = createServer(async (request, response) => {
@@ -89,9 +89,23 @@ export async function startServer({ getState, onAction, onMute, onRefresh, prefe
       }
 
       if (request.method === 'POST' && url.pathname === '/api/action') {
+        const { action, prompt, url: pullRequestUrl } = await readJsonBody(request);
+
+        return sendJson(response, 200, await onAction(String(action), String(pullRequestUrl), typeof prompt === 'string' ? prompt : undefined));
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/prompt') {
         const { action, url: pullRequestUrl } = await readJsonBody(request);
 
-        return sendJson(response, 200, await onAction(String(action), String(pullRequestUrl)));
+        return sendJson(response, 200, await onPrompt(String(action), String(pullRequestUrl)));
+      }
+
+      if (request.method === 'GET' && url.pathname === '/api/prompts') {
+        return sendJson(response, 200, await onGetPrompts());
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/prompts') {
+        return sendJson(response, 200, await onSavePrompts(await readJsonBody(request)));
       }
 
       if (request.method === 'POST' && url.pathname === '/api/mute') {
