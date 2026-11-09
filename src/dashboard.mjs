@@ -37,7 +37,7 @@ export async function buildDashboard(mutedUrls) {
     pullRequest.nextMove = deriveNextMove(pullRequest);
     pullRequest.sessions = findSessions(pullRequest, sessions, repositoryFolders);
     pullRequest.cost = pullRequest.sessions.reduce((total, session) => total + session.cost, 0);
-    pullRequest.worktrees = linkedWorktrees.map(worktree => ({ name: worktree.name, path: worktree.path }));
+    pullRequest.worktrees = linkedWorktrees.map(worktree => ({ id: worktree.id, name: worktree.name, path: worktree.path }));
   }
 
   linkStacks(pullRequests);
@@ -73,15 +73,19 @@ function findSessions(pullRequest, sessions, repositoryFolders) {
 }
 
 /**
- * Find the Orca worktrees checked out on a pull request branch.
+ * Find the Orca worktrees that are not archived and are checked out on, or linked to, a pull request, most recently active first.
  */
 
 function findWorktrees(pullRequest, worktrees) {
-  return worktrees.filter(
-    worktree =>
-      worktree.repository === pullRequest.repository &&
-      (worktree.branch === pullRequest.headBranch || worktree.linkedPullRequest === pullRequest.number)
-  );
+  return worktrees
+    .filter(
+      worktree =>
+        !worktree.isArchived &&
+        (worktree.linkedPullRequestUrls.includes(pullRequest.url) ||
+          (worktree.repository === pullRequest.repository &&
+            (worktree.branch === pullRequest.headBranch || worktree.linkedPullRequest === pullRequest.number)))
+    )
+    .sort((first, second) => second.lastActivityAt - first.lastActivityAt);
 }
 
 /**

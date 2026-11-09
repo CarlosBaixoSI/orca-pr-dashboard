@@ -17,6 +17,9 @@ See every open pull request you own in one place: what state it is in, who has t
 - **Session cost:** estimated from the token usage in the linked Claude Code and Codex transcripts, per pull request and in total.
 - **Linked sessions:** the Orca worktrees on the pull request branch and the Claude Code and Codex sessions that worked on it.
 - **Filters:** All, My move, Waiting and Muted. Muted pull requests are never counted or notified.
+- **Search and repository filter:** find a pull request by title or number (`123` or `#123`), and show only the repositories you pick.
+- **Collapsible repositories:** click a repository header to collapse or expand its pull requests. Every repository is expanded while searching.
+- **Resume:** a pull request with a linked Orca workspace gets a Resume button that opens its most recently active one.
 - **Status bar chip:** how many pull requests need you, always visible in Orca. Click it to open the sidebar panel.
 - **Notifications:** a desktop notification when a pull request starts needing your attention.
 - **Agent actions:** right click a pull request to start a Discuss or Fix workspace with the agent you pick in Settings.
@@ -37,6 +40,7 @@ Clicking a pull request opens it in the system browser. Right clicking one gives
 | --- | --- |
 | Open in browser | Opens the pull request in the system browser. |
 | Open in Orca | Opens the pull request in an Orca browser tab. |
+| Resume | Opens the most recently active Orca workspace linked to the pull request. Only shown when there is one. |
 | Discuss | Creates a clean workspace in the pull request's Orca project, named after the pull request, with your agent. |
 | Fix | Creates a workspace from the pull request head, named after the pull request, with your agent and a prompt asking it to check the pull request state and propose the fixes. The agent is told not to commit or push until you approve. |
 | Copy PR link | Copies the pull request URL to the clipboard. |

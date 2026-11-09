@@ -111,3 +111,17 @@ export async function createFixWorkspace(pullRequest, agent) {
     '--json'
   ]);
 }
+
+/**
+ * Open the most recently active workspace linked to the pull request.
+ */
+
+export function resumeWorkspace(pullRequest) {
+  const [worktree] = pullRequest.worktrees;
+
+  if (!worktree) {
+    throw new Error('No workspace linked to this pull request');
+  }
+
+  return runJsonCommand('orca', ['worktree', 'activate', '--worktree', `id:${worktree.id}`, '--json']);
+}

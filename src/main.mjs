@@ -1,5 +1,5 @@
 import { applyMutes, buildDashboard } from './dashboard.mjs';
-import { createDiscussWorkspace, createFixWorkspace } from './workspaces.mjs';
+import { createDiscussWorkspace, createFixWorkspace, resumeWorkspace } from './workspaces.mjs';
 import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 import { mkdir, rename, writeFile } from 'node:fs/promises';
@@ -12,7 +12,7 @@ const MAXIMUM_INDIVIDUAL_NOTIFICATIONS = 3;
 const PANEL_ID = 'pull-requests';
 const PLUGIN_ID = 'pr-dashboard';
 const PREFERRED_PORT = 47213;
-const PullRequestAction = { CopyLink: 'copy-link', Discuss: 'discuss', Fix: 'fix', OpenInBrowser: 'open-in-browser', OpenInOrca: 'open-in-orca' };
+const PullRequestAction = { CopyLink: 'copy-link', Discuss: 'discuss', Fix: 'fix', OpenInBrowser: 'open-in-browser', OpenInOrca: 'open-in-orca', Resume: 'resume' };
 const REFRESH_INTERVAL_MILLISECONDS = 3 * 60 * 1000;
 const RUNTIME = { dashboard: null, error: null, refreshing: null, server: null, timer: null };
 const STATUS_BAR_ITEM_ID = 'attention';
@@ -157,7 +157,8 @@ export default async function activate(context) {
   }
 
   /**
-   * Run a pull request action from the page: open it, copy its link, or start a Discuss or Fix workspace.
+   * Run a pull request action from the page: open it, copy its link, start a Discuss or Fix workspace, or resume a linked one.
+   * A new workspace triggers a refresh, so the page can offer to resume it.
    */
 
   async function runPullRequestAction(action, url) {
@@ -166,7 +167,8 @@ export default async function activate(context) {
       [PullRequestAction.Discuss]: async pullRequest => createDiscussWorkspace(pullRequest, await readAgent()),
       [PullRequestAction.Fix]: async pullRequest => createFixWorkspace(pullRequest, await readAgent()),
       [PullRequestAction.OpenInBrowser]: pullRequest => runCommand('open', [pullRequest.url]),
-      [PullRequestAction.OpenInOrca]: pullRequest => openTab(pullRequest.url)
+      [PullRequestAction.OpenInOrca]: pullRequest => openTab(pullRequest.url),
+      [PullRequestAction.Resume]: pullRequest => resumeWorkspace(pullRequest)
     };
     const pullRequest = RUNTIME.dashboard?.pullRequests.find(item => item.url === url);
 
@@ -175,6 +177,10 @@ export default async function activate(context) {
     }
 
     await actions[action](pullRequest);
+
+    if ([PullRequestAction.Discuss, PullRequestAction.Fix].includes(action)) {
+      refresh();
+    }
 
     return { ok: true };
   }
