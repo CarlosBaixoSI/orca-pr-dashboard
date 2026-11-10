@@ -680,6 +680,7 @@
 
   /**
    * Run a pull request action and tell the user how it went.
+   * The prompt is only sent when given, since the panel bridge rejects undefined values.
    */
 
   async function runAction(action, url, prompt) {
@@ -688,7 +689,7 @@
     }
 
     try {
-      await request('pull-request.action', { action, prompt, url });
+      await request('pull-request.action', prompt === undefined ? { action, url } : { action, prompt, url });
 
       if (ACTION_DONE_MESSAGES[action]) {
         showToast(ACTION_DONE_MESSAGES[action]);
