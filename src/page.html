@@ -84,11 +84,25 @@
   .chip.red::before { background: var(--red); }
   .chips { align-items: center; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
   .cost { color: var(--foreground); font-family: var(--font-mono); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .dialog { background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: var(--shadow); color: var(--body); max-height: calc(100vh - 32px); max-width: 640px; overflow: auto; padding: 0; width: calc(100% - 32px); }
+  .dialog .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+  .dialog .actions .reset { margin-right: auto; }
+  .dialog h2 { color: var(--foreground); font-size: 14px; font-weight: 600; margin: 0 0 4px; }
+  .dialog label { color: var(--secondary); display: block; font-size: 12px; font-weight: 500; margin-top: 12px; }
+  .dialog textarea { background: var(--subpanel); border: 1px solid var(--border); border-radius: 6px; color: var(--foreground); display: block; font: 12px/1.5 var(--font-mono); margin-top: 6px; min-height: 140px; padding: 8px 10px; resize: vertical; width: 100%; }
+  .dialog textarea:focus { border-color: var(--border-strong); outline: none; }
+  .dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
+  .dialog-body { padding: 16px; }
   .empty { color: var(--muted); padding: 40px 14px; text-align: center; }
   .error { background: color-mix(in srgb, var(--red) 12%, transparent); border: 1px solid color-mix(in srgb, var(--red) 30%, transparent); border-radius: 6px; color: var(--red); margin: 10px 14px; padding: 8px 12px; }
   .filters { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
-  .group { align-items: center; border-bottom: 1px solid var(--border); color: var(--foreground); display: flex; font-family: var(--font-mono); font-size: 12px; font-weight: 600; gap: 8px; letter-spacing: 0.06em; margin: 14px 14px 8px; padding: 6px 2px; text-transform: uppercase; }
+  .group { border-bottom: 1px solid var(--border); border-radius: 0; color: var(--foreground); display: flex; font-family: var(--font-mono); font-size: 12px; font-weight: 600; gap: 8px; letter-spacing: 0.06em; margin: 14px 14px 8px; padding: 6px 2px; text-align: left; text-transform: uppercase; width: calc(100% - 28px); }
+  .group .count { color: var(--muted); font-weight: 500; margin-left: auto; }
   .group svg { color: var(--muted); }
+  .group svg:first-child { transition: transform 0.15s; }
+  .group.collapsed svg:first-child { transform: rotate(-90deg); }
+  .hint { color: var(--muted); font-size: 12px; margin: 0; }
+  .hint code { font-family: var(--font-mono); }
   .kind { align-items: center; background: var(--tint); border: 1px solid var(--border-strong); border-radius: 4px; color: var(--muted); display: flex; height: 20px; justify-content: center; margin-top: 1px; width: 20px; }
   .kind svg { height: 13px; width: 13px; }
   .menu { background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: var(--shadow); min-width: 200px; padding: 4px; position: fixed; z-index: 2; }
@@ -96,21 +110,31 @@
   .menu button svg { color: var(--muted); }
   .menu button:hover { background: var(--tint-strong); color: var(--foreground); }
   .menu button:hover svg { color: var(--foreground); }
+  .menu button.nested { padding-left: 30px; }
+  .menu button.owner { font-weight: 600; }
   .menu hr { border: 0; border-top: 1px solid var(--border); margin: 4px 0; }
   .meta { align-items: center; color: var(--muted); display: flex; gap: 12px; }
   .meta button { font-size: 12px; padding: 2px 4px; }
   .next-move { align-items: center; color: var(--muted); display: inline-flex; font-size: 11px; gap: 5px; }
   .next-move strong { color: var(--secondary); font-weight: 500; }
   .next-move.you { background: var(--accent); border-radius: 4px; color: var(--accent-foreground); font-weight: 600; padding: 1px 8px; }
+  .next-move.handled strong { color: var(--green); }
   .next-move.you strong { background: color-mix(in srgb, var(--accent-foreground) 10%, transparent); border-radius: 3px; color: inherit; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; padding: 0 4px; text-transform: uppercase; }
   .number { color: var(--muted); font-family: var(--font-mono); font-size: 12px; margin-left: 8px; }
   .pull-request { align-items: flex-start; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; box-shadow: var(--inset); display: grid; gap: 0 10px; grid-template-columns: auto minmax(0, 1fr) auto; margin: 0 14px 6px; padding: 10px 12px; transition: background-color 0.15s, border-color 0.15s; }
   .pull-request:hover { background: var(--surface-hover); border-color: var(--border-strong); }
   .pull-request > div { min-width: 0; }
   .pull-request.muted { opacity: 0.5; }
-  .refresh { background: var(--tint); border-color: var(--border-strong); color: var(--foreground); font-size: 12px; font-weight: 500; padding: 4px 12px; }
-  .refresh svg { color: var(--muted); }
-  .refresh:hover { background: var(--tint-strong); }
+  .primary { background: var(--accent); color: var(--accent-foreground); font-size: 12px; font-weight: 600; padding: 4px 12px; }
+  .primary:hover { color: var(--accent-foreground); opacity: 0.9; }
+  .refresh, .repository-filter, .resume { background: var(--tint); border-color: var(--border-strong); color: var(--foreground); font-size: 12px; font-weight: 500; padding: 4px 12px; }
+  .refresh svg, .repository-filter svg, .resume svg { color: var(--muted); }
+  .refresh:hover, .repository-filter:hover, .resume:hover { background: var(--tint-strong); }
+  .repository-filter.active { border-color: var(--accent); }
+  .resume { font-size: 12px; padding: 2px 8px; }
+  .search { align-items: center; background: var(--subpanel); border: 1px solid var(--border); border-radius: 6px; color: var(--muted); display: flex; flex: 1; gap: 6px; min-width: 0; padding: 0 10px; }
+  .search:focus-within { border-color: var(--border-strong); }
+  .search input { background: transparent; border: 0; color: var(--foreground); flex: 1; font: inherit; font-size: 12px; min-width: 0; outline: none; padding: 5px 0; }
   .segments { background: var(--subpanel); border: 1px solid var(--border); border-radius: 6px; display: flex; gap: 2px; padding: 2px; }
   .segments button { border-radius: 4px; font-size: 12px; font-weight: 500; padding: 3px 10px; }
   .segments button.selected { background: var(--surface); border-color: var(--border); box-shadow: var(--inset); color: var(--foreground); font-weight: 600; }
@@ -125,6 +149,7 @@
   .sessions li:last-child::before { bottom: 50%; }
   .sessions li:only-child::before { display: none; }
   .summary { color: var(--muted); font-family: var(--font-mono); font-size: 12px; }
+  .toolbar { display: flex; flex-basis: 100%; gap: 8px; }
   .title { color: var(--foreground); font-weight: 500; }
   .toast { background: var(--surface); border: 1px solid var(--border-strong); border-radius: 6px; bottom: 44px; box-shadow: var(--shadow); color: var(--body); font-size: 12px; left: 14px; padding: 8px 12px; position: fixed; right: 14px; z-index: 2; }
   .toast.error { color: var(--red); }
@@ -142,44 +167,85 @@
   <span id="attention" class="attention" hidden></span>
   <span id="summary" class="summary"></span>
   <nav id="filters" class="filters"></nav>
+  <div class="toolbar">
+    <label class="search"><span id="search-icon"></span><input id="search" type="search" placeholder="Search by title or number" autocomplete="off" spellcheck="false"></label>
+    <button type="button" id="repository-filter" class="repository-filter" data-action="repositories" aria-haspopup="true"></button>
+  </div>
 </header>
 <main id="list"></main>
 <footer id="footer"></footer>
 <div id="menu" class="menu" hidden></div>
+<div id="repositories" class="menu" hidden></div>
+<dialog id="dialog" class="dialog"></dialog>
 <div id="toast" class="toast" hidden></div>
 <script>
-  const ACTION_DONE_MESSAGES = { 'copy-link': 'Link copied.', discuss: 'Workspace created.', fix: 'Workspace created.' };
-  const ACTION_MESSAGES = { discuss: 'Creating a Discuss workspace…', fix: 'Creating a Fix workspace…' };
+  const ACTION_DONE_MESSAGES = { 'copy-link': 'Link copied.', discuss: 'Workspace created.', fix: 'Workspace created.', resume: 'Workspace opened.' };
+  const ACTION_MESSAGES = { discuss: 'Creating a Discuss workspace…', fix: 'Creating a Fix workspace…', resume: 'Opening the workspace…' };
+  const COLLAPSED_REPOSITORIES_KEY = 'collapsedRepositories';
+  const DIALOG_ACTIONS = { cancel: closeDialog, reset: resetPrompts, save: savePrompts, start: startWorkspace };
+  const DIALOG_TITLES = { discuss: 'Discuss', fix: 'Fix' };
   const ICONS = {
     arrow: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
     bell: '<path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>',
     bellOff: '<path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M17 17H4a1 1 0 0 1-.74-1.673C4.59 13.956 6 12.499 6 8a6 6 0 0 1 .258-1.742"/><path d="m2 2 20 20"/><path d="M8.668 3.01A6 6 0 0 1 18 8c0 2.687.77 4.653 1.707 6.05"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    chevron: '<path d="m6 9 6 6 6-6"/>',
     clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
     comment: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
     copy: '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
     externalLink: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
     eye: '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
+    checkCircle: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+    filter: '<path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>',
+    minus: '<path d="M5 12h14"/>',
     orca: '<circle cx="12" cy="12" r="9"/><path d="m10 9 5 3-5 3V9z" fill="currentColor"/>',
+    pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>',
+    play: '<path d="M6 3v18l14-9z"/>',
     pullRequest: '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M6 9v12"/>',
     refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
     repository: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
     sessions: '<path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/>',
     stacked: '<circle cx="6" cy="6" r="3"/><path d="M6 9v12"/><path d="M13 6h3a2 2 0 0 1 2 2v3"/><path d="M18 15v6"/><path d="M21 18h-6"/>',
     wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>'
   };
   const FILTER_KEY = 'filter';
   const Filter = { All: 'all', Muted: 'muted', MyMove: 'my-move', Waiting: 'waiting' };
-  const MenuAction = { CopyLink: 'copy-link', Discuss: 'discuss', Fix: 'fix', Mute: 'mute', OpenInBrowser: 'open-in-browser', OpenInOrca: 'open-in-orca' };
+  const MenuAction = { CopyLink: 'copy-link', Discuss: 'discuss', Fix: 'fix', Handled: 'handled', Mute: 'mute', OpenInBrowser: 'open-in-browser', OpenInOrca: 'open-in-orca', Resume: 'resume' };
   const ORCA_PLUGIN = window.orca?.plugin ?? null;
   const OWNERS = { checks: ['', ICONS.clock, 'Checks'], reviewers: ['', ICONS.eye, 'Reviewers'], you: ['you', null, 'You'] };
+  const PLACEHOLDERS = ['baseBranch', 'headBranch', 'number', 'reference', 'repository', 'title', 'url'];
   const POLL_MILLISECONDS = 30000;
+  const SELECTED_REPOSITORIES_KEY = 'selectedRepositories';
   const TOAST_MILLISECONDS = 4000;
   const TOKEN = new URLSearchParams(location.search).get('token') ?? '';
+  const collapsedRepositories = new Set(readList(COLLAPSED_REPOSITORIES_KEY));
   const expandedSessions = new Set();
+  const selectedRepositories = new Set(readList(SELECTED_REPOSITORIES_KEY));
+  let dialogLaunch = null;
   let filter = readFilter();
   let menuPullRequest = null;
+  let promptDefaults = {};
+  let query = '';
   let state = null;
   let toastTimer = null;
+
+  /**
+   * Close the prompt dialog.
+   */
+
+  function closeDialog() {
+    document.getElementById('dialog').close();
+    dialogLaunch = null;
+  }
+
+  /**
+   * Check whether a pull request can be marked as handled: the next move is yours, or it is already handled.
+   */
+
+  function canBeHandled(pullRequest) {
+    return pullRequest.isHandled || (pullRequest.nextMove.owner === 'you' && !pullRequest.isDraft);
+  }
 
   /**
    * Hide the right click menu.
@@ -188,6 +254,14 @@
   function closeMenu() {
     document.getElementById('menu').hidden = true;
     menuPullRequest = null;
+  }
+
+  /**
+   * Hide the repository filter menu.
+   */
+
+  function closeRepositoryMenu() {
+    document.getElementById('repositories').hidden = true;
   }
 
   /**
@@ -229,11 +303,35 @@
   }
 
   /**
+   * Group repository names by their owner, both sorted.
+   */
+
+  function groupByOwner(repositories) {
+    const groups = new Map();
+
+    for (const repository of [...repositories].sort()) {
+      const owner = repository.split('/')[0];
+
+      groups.set(owner, [...(groups.get(owner) ?? []), repository]);
+    }
+
+    return groups;
+  }
+
+  /**
    * Render an icon.
    */
 
   function icon(paths) {
     return `<svg viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`;
+  }
+
+  /**
+   * List every repository with an open pull request, plus any still selected.
+   */
+
+  function listRepositories() {
+    return [...new Set([...(state?.dashboard?.pullRequests.map(pullRequest => pullRequest.repository) ?? []), ...selectedRepositories])].sort();
   }
 
   /**
@@ -261,6 +359,28 @@
   }
 
   /**
+   * Check whether a pull request belongs to one of the selected repositories, or any repository when none is selected.
+   */
+
+  function matchesRepository(pullRequest) {
+    return selectedRepositories.size === 0 || selectedRepositories.has(pullRequest.repository);
+  }
+
+  /**
+   * Check whether a pull request title or number matches the search query.
+   */
+
+  function matchesSearch(pullRequest) {
+    const normalizedQuery = query.trim().toLowerCase().replace(/^#/, '');
+
+    if (!normalizedQuery) {
+      return true;
+    }
+
+    return pullRequest.title.toLowerCase().includes(normalizedQuery) || String(pullRequest.number).startsWith(normalizedQuery);
+  }
+
+  /**
    * Read the saved filter.
    */
 
@@ -270,6 +390,64 @@
     } catch {
       return Filter.All;
     }
+  }
+
+  /**
+   * Read a saved list of strings.
+   */
+
+  function readList(key) {
+    try {
+      const value = JSON.parse(localStorage.getItem(key));
+
+      return Array.isArray(value) ? value.filter(item => typeof item === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Fill in the Discuss or Fix prompt for a pull request and open it for editing before the workspace starts.
+   */
+
+  async function openLaunchDialog(action, pullRequest) {
+    try {
+      const { prompt } = await request('pull-request.prompt', { action, url: pullRequest.url });
+
+      showDialog(renderLaunchDialog(action, pullRequest, prompt));
+      dialogLaunch = { action, url: pullRequest.url };
+    } catch (error) {
+      showToast(error.message, true);
+    }
+  }
+
+  /**
+   * Open the Discuss and Fix prompt templates for editing.
+   */
+
+  async function openPromptsDialog() {
+    try {
+      const { defaults, prompts } = await request('prompts.get');
+
+      promptDefaults = defaults;
+      showDialog(renderPromptsDialog(prompts));
+    } catch (error) {
+      showToast(error.message, true);
+    }
+  }
+
+  /**
+   * Show the repository filter menu under its button.
+   */
+
+  function openRepositoryMenu() {
+    const button = document.getElementById('repository-filter').getBoundingClientRect();
+    const menu = document.getElementById('repositories');
+
+    menu.innerHTML = renderRepositoryMenu();
+    menu.hidden = false;
+    menu.style.left = `${Math.max(8, Math.min(button.left, innerWidth - menu.offsetWidth - 8))}px`;
+    menu.style.top = `${button.bottom + 4}px`;
   }
 
   /**
@@ -325,7 +503,11 @@
     }
 
     chips.push(`<span class="arrow">${icon(ICONS.arrow)}</span>`);
-    chips.push(`<span class="next-move ${ownerKind}">${ownerIcon ? icon(ownerIcon) : ''}<strong>${escapeHtml(ownerLabel)}</strong>${escapeHtml(pullRequest.nextMove.reason)}</span>`);
+    chips.push(
+      pullRequest.isHandled
+        ? `<span class="next-move handled" title="Handled until the pull request changes">${icon(ICONS.checkCircle)}<strong>Handled</strong>${escapeHtml(pullRequest.nextMove.reason)}</span>`
+        : `<span class="next-move ${ownerKind}">${ownerIcon ? icon(ownerIcon) : ''}<strong>${escapeHtml(ownerLabel)}</strong>${escapeHtml(pullRequest.nextMove.reason)}</span>`
+    );
 
     return `<div class="chips">${chips.join('')}</div>`;
   }
@@ -340,7 +522,31 @@
 
     document.getElementById('filters').innerHTML = `<span class="segments">${options
       .map(([value, label]) => `<button type="button" data-filter="${value}" class="${value === filter ? 'selected' : ''}">${label}</button>`)
-      .join('')}</span><button type="button" class="refresh" data-action="refresh" ${state?.refreshing ? 'disabled' : ''}>${icon(ICONS.refresh)}${state?.refreshing ? 'Refreshing…' : 'Refresh'}</button>`;
+      .join('')}</span><button type="button" class="refresh" data-action="prompts" title="Edit the Discuss and Fix prompts">${icon(ICONS.pencil)}Prompts</button><button type="button" class="refresh" data-action="refresh" ${state?.refreshing ? 'disabled' : ''}>${icon(ICONS.refresh)}${state?.refreshing ? 'Refreshing…' : 'Refresh'}</button>`;
+  }
+
+  /**
+   * Render a repository header, which collapses or expands its pull requests, followed by them.
+   * Every repository is expanded while searching.
+   */
+
+  function renderGroup(repository, roots, childrenByParent, count) {
+    const isCollapsed = !query.trim() && collapsedRepositories.has(repository);
+
+    return `<button type="button" class="group ${isCollapsed ? 'collapsed' : ''}" data-action="toggle-group" data-repository="${escapeHtml(repository)}" aria-expanded="${!isCollapsed}">${icon(ICONS.chevron)}${icon(ICONS.repository)}${escapeHtml(repository)}<span class="count">${count}</span></button>${
+      isCollapsed ? '' : roots.map(root => renderTree(root, childrenByParent, 0)).join('')
+    }`;
+  }
+
+  /**
+   * Render the dialog that edits the Discuss or Fix prompt for one pull request before its workspace starts.
+   */
+
+  function renderLaunchDialog(action, pullRequest, prompt) {
+    return `<h2>${DIALOG_TITLES[action]}: ${escapeHtml(pullRequest.title)}</h2>
+      <p class="hint">This prompt is only for this workspace. Change the template in Prompts. Leave it empty to start the agent without a prompt.</p>
+      <textarea name="prompt" rows="14" aria-label="Prompt">${escapeHtml(prompt)}</textarea>
+      <div class="actions"><button type="button" class="refresh" data-dialog="cancel">Cancel</button><button type="button" class="primary" data-dialog="start">Start workspace</button></div>`;
   }
 
   /**
@@ -352,14 +558,66 @@
       [MenuAction.OpenInBrowser, ICONS.externalLink, 'Open in browser'],
       [MenuAction.OpenInOrca, ICONS.orca, 'Open in Orca'],
       null,
+      ...(pullRequest.worktrees.length ? [[MenuAction.Resume, ICONS.play, 'Resume']] : []),
       [MenuAction.Discuss, ICONS.comment, 'Discuss'],
       [MenuAction.Fix, ICONS.wrench, 'Fix'],
       null,
       [MenuAction.CopyLink, ICONS.copy, 'Copy PR link'],
+      ...(canBeHandled(pullRequest) ? [pullRequest.isHandled ? [MenuAction.Handled, ICONS.checkCircle, 'Unmark as handled'] : [MenuAction.Handled, ICONS.checkCircle, 'Mark as handled']] : []),
       pullRequest.isMuted ? [MenuAction.Mute, ICONS.bell, 'Unmute notifications'] : [MenuAction.Mute, ICONS.bellOff, 'Mute notifications']
     ];
 
     return items.map(item => (item ? `<button type="button" data-menu="${item[0]}">${icon(item[1])}${item[2]}</button>` : '<hr>')).join('');
+  }
+
+  /**
+   * Render the dialog that edits the Discuss and Fix prompt templates.
+   */
+
+  function renderPromptsDialog(prompts) {
+    return `<h2>Prompts</h2>
+      <p class="hint">Sent to the agent when a Discuss or Fix workspace starts. Placeholders: ${PLACEHOLDERS.map(placeholder => `<code>{${placeholder}}</code>`).join(' ')}. Leave a prompt empty to start the agent without one.</p>
+      <label>Fix<textarea name="fix" rows="10">${escapeHtml(prompts.fix)}</textarea></label>
+      <label>Discuss<textarea name="discuss" rows="6">${escapeHtml(prompts.discuss)}</textarea></label>
+      <div class="actions"><button type="button" class="refresh reset" data-dialog="reset">Reset to defaults</button><button type="button" class="refresh" data-dialog="cancel">Cancel</button><button type="button" class="primary" data-dialog="save">Save</button></div>`;
+  }
+
+  /**
+   * Render the repository filter button label.
+   */
+
+  function renderRepositoryFilter() {
+    const button = document.getElementById('repository-filter');
+    const selectedOwners = [...groupByOwner(selectedRepositories).keys()];
+    const wholeOwner = selectedOwners.length === 1 && listRepositories().filter(repository => repository.startsWith(`${selectedOwners[0]}/`)).every(repository => selectedRepositories.has(repository));
+    const label = selectedRepositories.size === 0
+      ? 'All repositories'
+      : selectedRepositories.size === 1
+        ? [...selectedRepositories][0].split('/').pop()
+        : wholeOwner
+          ? `${selectedOwners[0]}/*`
+          : `${selectedRepositories.size} repositories`;
+
+    button.classList.toggle('active', selectedRepositories.size > 0);
+    button.innerHTML = `${icon(ICONS.filter)}${escapeHtml(label)}`;
+  }
+
+  /**
+   * Render the repository filter menu: each owner, which toggles all its repositories, followed by its repositories.
+   * An owner shows a check when all its repositories are selected, and a dash when only some are.
+   */
+
+  function renderRepositoryMenu() {
+    const options = [...groupByOwner(listRepositories())].map(([owner, repositories]) => {
+      const selectedCount = repositories.filter(repository => selectedRepositories.has(repository)).length;
+      const ownerIcon = selectedCount === repositories.length ? ICONS.check : selectedCount > 0 ? ICONS.minus : '';
+
+      return `<button type="button" class="owner" data-owner-option="${escapeHtml(owner)}">${icon(ownerIcon)}${escapeHtml(owner)}</button>${repositories
+        .map(repository => `<button type="button" class="nested" data-repository-option="${escapeHtml(repository)}">${icon(selectedRepositories.has(repository) ? ICONS.check : '')}${escapeHtml(repository.slice(owner.length + 1))}</button>`)
+        .join('')}`;
+    });
+
+    return `<button type="button" data-repository-option="">${icon(selectedRepositories.size === 0 ? ICONS.check : '')}All repositories</button>${options.length ? '<hr>' : ''}${options.join('<hr>')}`;
   }
 
   /**
@@ -382,8 +640,10 @@
         ${renderChips(pullRequest)}
       </div>
       <div class="meta">
+        ${pullRequest.worktrees.length ? `<button type="button" class="resume" data-action="resume" data-url="${escapeHtml(pullRequest.url)}" title="Open ${escapeHtml(pullRequest.worktrees[0].name)}">${icon(ICONS.play)}Resume</button>` : ''}
         <span class="cost" title="Estimated from linked agent transcripts">${formatCost(pullRequest.cost)}</span>
         <button type="button" data-action="sessions" data-url="${escapeHtml(pullRequest.url)}" title="Linked sessions">${icon(ICONS.sessions)}${pullRequest.sessions.length}</button>
+        ${canBeHandled(pullRequest) ? `<button type="button" data-action="handled" data-url="${escapeHtml(pullRequest.url)}" data-handled="${pullRequest.isHandled}" title="${pullRequest.isHandled ? 'Unmark as handled' : 'Mark as handled until the pull request changes'}">${icon(pullRequest.isHandled ? ICONS.checkCircle : ICONS.check)}</button>` : ''}
         <button type="button" data-action="mute" data-url="${escapeHtml(pullRequest.url)}" data-muted="${pullRequest.isMuted}" title="${pullRequest.isMuted ? 'Unmute' : 'Mute'}">${icon(pullRequest.isMuted ? ICONS.bellOff : ICONS.bell)}</button>
       </div>
       ${sessions}
@@ -410,6 +670,7 @@
     const list = document.getElementById('list');
 
     renderFilters();
+    renderRepositoryFilter();
     document.getElementById('footer').textContent = dashboard ? `Updated ${formatRelative(dashboard.refreshedAt)} · refreshes every 3 minutes` : '';
 
     if (!dashboard) {
@@ -419,7 +680,7 @@
       return;
     }
 
-    const visible = dashboard.pullRequests.filter(matchesFilter);
+    const visible = dashboard.pullRequests.filter(pullRequest => matchesFilter(pullRequest) && matchesRepository(pullRequest) && matchesSearch(pullRequest));
     const byUrl = new Map(visible.map(pullRequest => [pullRequest.url, pullRequest]));
     const childrenByParent = new Map();
     const groups = new Map();
@@ -438,7 +699,7 @@
     attention.classList.toggle('clear', dashboard.attentionCount === 0);
     document.getElementById('summary').textContent = totalCost > 0 ? `${formatCost(totalCost)} across linked sessions` : '';
     list.innerHTML = `${state.error ? `<div class="error">Last refresh failed: ${escapeHtml(state.error)}</div>` : ''}${
-      [...groups].map(([repository, roots]) => `<div class="group">${icon(ICONS.repository)}${escapeHtml(repository)}</div>${roots.map(root => renderTree(root, childrenByParent, 0)).join('')}`).join('') ||
+      [...groups].map(([repository, roots]) => renderGroup(repository, roots, childrenByParent, visible.filter(pullRequest => pullRequest.repository === repository).length)).join('') ||
       '<div class="empty">No pull requests here.</div>'
     }`;
   }
@@ -452,7 +713,16 @@
       return ORCA_PLUGIN.request(name, input);
     }
 
-    const routes = { 'dashboard.refresh': ['POST', '/api/refresh'], 'dashboard.state': ['GET', '/api/state'], 'pull-request.action': ['POST', '/api/action'], 'pull-request.mute': ['POST', '/api/mute'] };
+    const routes = {
+      'dashboard.refresh': ['POST', '/api/refresh'],
+      'dashboard.state': ['GET', '/api/state'],
+      'prompts.get': ['GET', '/api/prompts'],
+      'prompts.save': ['POST', '/api/prompts'],
+      'pull-request.action': ['POST', '/api/action'],
+      'pull-request.handled': ['POST', '/api/handled'],
+      'pull-request.mute': ['POST', '/api/mute'],
+      'pull-request.prompt': ['POST', '/api/prompt']
+    };
     const [method, path] = routes[name];
     const response = await fetch(path, {
       body: input ? JSON.stringify(input) : undefined,
@@ -469,15 +739,16 @@
 
   /**
    * Run a pull request action and tell the user how it went.
+   * The prompt is only sent when given, since the panel bridge rejects undefined values.
    */
 
-  async function runAction(action, url) {
+  async function runAction(action, url, prompt) {
     if (ACTION_MESSAGES[action]) {
       showToast(ACTION_MESSAGES[action]);
     }
 
     try {
-      await request('pull-request.action', { action, url });
+      await request('pull-request.action', prompt === undefined ? { action, url } : { action, prompt, url });
 
       if (ACTION_DONE_MESSAGES[action]) {
         showToast(ACTION_DONE_MESSAGES[action]);
@@ -492,8 +763,20 @@
    */
 
   function runMenuAction(action, pullRequest) {
+    if (action === MenuAction.Handled) {
+      setHandled(pullRequest.url, !pullRequest.isHandled);
+
+      return;
+    }
+
     if (action === MenuAction.Mute) {
       load('pull-request.mute', { muted: !pullRequest.isMuted, url: pullRequest.url });
+
+      return;
+    }
+
+    if (DIALOG_TITLES[action]) {
+      openLaunchDialog(action, pullRequest);
 
       return;
     }
@@ -516,6 +799,78 @@
   }
 
   /**
+   * Put the default Discuss and Fix templates back in the prompts dialog, without saving them.
+   */
+
+  function resetPrompts() {
+    const dialog = document.getElementById('dialog');
+
+    dialog.querySelector('[name="discuss"]').value = promptDefaults.discuss ?? '';
+    dialog.querySelector('[name="fix"]').value = promptDefaults.fix ?? '';
+  }
+
+  /**
+   * Save the Discuss and Fix templates from the prompts dialog.
+   */
+
+  async function savePrompts() {
+    const dialog = document.getElementById('dialog');
+
+    try {
+      await request('prompts.save', { discuss: dialog.querySelector('[name="discuss"]').value, fix: dialog.querySelector('[name="fix"]').value });
+      closeDialog();
+      showToast('Prompts saved.');
+    } catch (error) {
+      showToast(error.message, true);
+    }
+  }
+
+  /**
+   * Mark a pull request as handled, or unmark it. Marking refreshes the pull requests first, so it tells the user it is working.
+   */
+
+  async function setHandled(url, handled) {
+    if (handled) {
+      showToast('Marking as handled…');
+    }
+
+    try {
+      state = await request('pull-request.handled', { handled, url });
+      render();
+      showToast(handled ? 'Handled until the pull request changes.' : 'No longer handled.');
+    } catch (error) {
+      showToast(error.message, true);
+    }
+  }
+
+  /**
+   * Save the repository filter selection and show it in the menu and the list.
+   */
+
+  function saveRepositorySelection() {
+    writeList(SELECTED_REPOSITORIES_KEY, selectedRepositories);
+    document.getElementById('repositories').innerHTML = renderRepositoryMenu();
+    render();
+  }
+
+  /**
+   * Show the prompt dialog with the given content.
+   */
+
+  function showDialog(content) {
+    const dialog = document.getElementById('dialog');
+
+    dialog.innerHTML = `<div class="dialog-body">${content}</div>`;
+    dialogLaunch = null;
+
+    if (!dialog.open) {
+      dialog.showModal();
+    }
+
+    dialog.querySelector('textarea')?.focus();
+  }
+
+  /**
    * Show a short message above the footer.
    */
 
@@ -530,6 +885,49 @@
   }
 
   /**
+   * Start the Discuss or Fix workspace with the prompt from the dialog.
+   */
+
+  function startWorkspace() {
+    const { action, url } = dialogLaunch;
+    const prompt = document.getElementById('dialog').querySelector('[name="prompt"]').value;
+
+    closeDialog();
+    runAction(action, url, prompt);
+  }
+
+  /**
+   * Select every repository of an owner in the repository filter, or deselect them all when they already are.
+   */
+
+  function toggleOwner(owner) {
+    const repositories = listRepositories().filter(repository => repository.startsWith(`${owner}/`));
+    const isSelected = repositories.every(repository => selectedRepositories.has(repository));
+
+    for (const repository of repositories) {
+      isSelected ? selectedRepositories.delete(repository) : selectedRepositories.add(repository);
+    }
+
+    saveRepositorySelection();
+  }
+
+  /**
+   * Toggle a repository in the repository filter, or clear the filter when none is given.
+   */
+
+  function toggleRepository(repository) {
+    if (!repository) {
+      selectedRepositories.clear();
+    } else if (selectedRepositories.has(repository)) {
+      selectedRepositories.delete(repository);
+    } else {
+      selectedRepositories.add(repository);
+    }
+
+    saveRepositorySelection();
+  }
+
+  /**
    * Save the selected filter.
    */
 
@@ -539,9 +937,52 @@
     } catch {}
   }
 
+  /**
+   * Save a list of strings.
+   */
+
+  function writeList(key, values) {
+    try {
+      localStorage.setItem(key, JSON.stringify([...values]));
+    } catch {}
+  }
+
   document.body.addEventListener('click', event => {
     const button = event.target.closest('button');
     const link = event.target.closest('a[data-url]');
+
+    if (event.target.id === 'dialog') {
+      closeDialog();
+
+      return;
+    }
+
+    if (button?.dataset.dialog) {
+      DIALOG_ACTIONS[button.dataset.dialog]();
+
+      return;
+    }
+
+    if (button?.dataset.ownerOption) {
+      toggleOwner(button.dataset.ownerOption);
+
+      return;
+    }
+
+    if (button?.dataset.repositoryOption !== undefined) {
+      toggleRepository(button.dataset.repositoryOption);
+
+      return;
+    }
+
+    if (button?.dataset.action === 'repositories') {
+      closeMenu();
+      document.getElementById('repositories').hidden ? openRepositoryMenu() : closeRepositoryMenu();
+
+      return;
+    }
+
+    closeRepositoryMenu();
 
     if (button?.dataset.menu) {
       const pullRequest = menuPullRequest;
@@ -581,9 +1022,35 @@
       return;
     }
 
+    if (button.dataset.action === 'prompts') {
+      openPromptsDialog();
+
+      return;
+    }
+
+    if (button.dataset.action === 'resume') {
+      runAction(MenuAction.Resume, button.dataset.url);
+
+      return;
+    }
+
+    if (button.dataset.action === 'toggle-group') {
+      collapsedRepositories.has(button.dataset.repository) ? collapsedRepositories.delete(button.dataset.repository) : collapsedRepositories.add(button.dataset.repository);
+      writeList(COLLAPSED_REPOSITORIES_KEY, collapsedRepositories);
+      render();
+
+      return;
+    }
+
     if (button.dataset.action === 'sessions') {
       expandedSessions.has(button.dataset.url) ? expandedSessions.delete(button.dataset.url) : expandedSessions.add(button.dataset.url);
       render();
+
+      return;
+    }
+
+    if (button.dataset.action === 'handled') {
+      setHandled(button.dataset.url, button.dataset.handled !== 'true');
 
       return;
     }
@@ -607,8 +1074,22 @@
     event.preventDefault();
     openMenu(pullRequest, event.clientX, event.clientY);
   });
-  document.addEventListener('keydown', event => event.key === 'Escape' && closeMenu());
-  window.addEventListener('blur', closeMenu);
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      closeMenu();
+      closeRepositoryMenu();
+    }
+  });
+  document.getElementById('dialog').addEventListener('close', () => (dialogLaunch = null));
+  document.getElementById('search').addEventListener('input', event => {
+    query = event.target.value;
+    render();
+  });
+  document.getElementById('search-icon').outerHTML = icon(ICONS.search);
+  window.addEventListener('blur', () => {
+    closeMenu();
+    closeRepositoryMenu();
+  });
 
   if (ORCA_PLUGIN) {
     ORCA_PLUGIN.on('dashboard.changed', nextState => {

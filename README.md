@@ -17,9 +17,14 @@ See every open pull request you own in one place: what state it is in, who has t
 - **Session cost:** estimated from the token usage in the linked Claude Code and Codex transcripts, per pull request and in total.
 - **Linked sessions:** the Orca worktrees on the pull request branch and the Claude Code and Codex sessions that worked on it.
 - **Filters:** All, My move, Waiting and Muted. Muted pull requests are never counted or notified.
+- **Search and repository filter:** find a pull request by title or number (`123` or `#123`), and show only the repositories you pick. Repositories are grouped by owner, and clicking an owner selects or clears all its repositories.
+- **Handled:** mark a pull request whose next move is yours as handled, such as after addressing requested changes and re-requesting a review while leaving threads for the reviewer to resolve. It stops needing your attention until its next move or anything on GitHub changes.
+- **Collapsible repositories:** click a repository header to collapse or expand its pull requests. Every repository is expanded while searching.
+- **Resume:** a pull request with a linked Orca workspace gets a Resume button that opens its most recently active one.
 - **Status bar chip:** how many pull requests need you, always visible in Orca. Click it to open the sidebar panel.
 - **Notifications:** a desktop notification when a pull request starts needing your attention.
-- **Agent actions:** right click a pull request to start a Discuss or Fix workspace with the agent you pick in Settings.
+- **Agent actions:** right click a pull request to start a Discuss or Fix workspace with the agent you pick in Settings. The prompt opens for editing before the workspace starts.
+- **Editable prompts:** the Prompts button edits the Discuss and Fix prompt templates.
 
 ## Sidebar panel
 
@@ -37,9 +42,11 @@ Clicking a pull request opens it in the system browser. Right clicking one gives
 | --- | --- |
 | Open in browser | Opens the pull request in the system browser. |
 | Open in Orca | Opens the pull request in an Orca browser tab. |
-| Discuss | Creates a clean workspace in the pull request's Orca project, named after the pull request, with your agent. |
-| Fix | Creates a workspace from the pull request head, named after the pull request, with your agent and a prompt asking it to check the pull request state and propose the fixes. The agent is told not to commit or push until you approve. |
+| Resume | Opens the most recently active Orca workspace linked to the pull request. Only shown when there is one. |
+| Discuss | Creates a clean workspace in the pull request's Orca project, named after the pull request, with your agent and the Discuss prompt, which is empty by default. |
+| Fix | Creates a workspace from the pull request head, named after the pull request, with your agent and the Fix prompt. By default it asks the agent to check the pull request state and propose the fixes, and not to commit or push until you approve. |
 | Copy PR link | Copies the pull request URL to the clipboard. |
+| Mark as handled | Stops the pull request needing your attention until it changes, or unmarks it. Only shown when the next move is yours or it is already handled. The check button on the row does the same. |
 | Mute notifications | Mutes the pull request, or unmutes it if it is already muted. |
 
 ## Linked sessions
@@ -81,6 +88,24 @@ For local development, install from the cloned folder instead, and reinstall aft
 
 Before creating a workspace, Discuss and Fix check that the agent's command is installed, looking it up in your login shell like a new terminal does. When it is missing, the plugin shows an error and creates nothing.
 
+## Prompts
+
+Discuss and Fix fill in their prompt template for the pull request and open it in a dialog. Edit it for that workspace only, then click Start workspace. An empty prompt starts the agent without one.
+
+Click Prompts in the header to change the templates. These placeholders are replaced with the pull request values:
+
+| Placeholder | Value |
+| --- | --- |
+| `{baseBranch}` | The branch the pull request merges into. |
+| `{headBranch}` | The pull request branch. |
+| `{number}` | The pull request number. |
+| `{reference}` | The repository and number, such as `acme/api#12`. |
+| `{repository}` | The repository, such as `acme/api`. |
+| `{title}` | The pull request title. |
+| `{url}` | The pull request URL. |
+
+Reset to defaults puts back the built in templates. A template you have not changed follows the default in later versions.
+
 ## Commands
 
 | Command | What it does |
@@ -95,7 +120,8 @@ The background worker polls `gh` every 3 minutes, links each pull request to its
 
 - **Browser tab:** the worker serves the page on `127.0.0.1:47213`. API calls require a per-install token and a local `Host` header.
 - **Sidebar panel:** the same page talks to the worker through `orca.plugin.request`, since panel frames cannot reach the local server, and updates on every refresh.
-- **Status bar:** the worker updates the chip with `statusBar.update` after every refresh and mute.
+- **Status bar:** the worker updates the chip with `statusBar.update` after every refresh, mute and handled mark.
+- **Handled:** marking refreshes the pull request first, then saves its next move reason and GitHub `updatedAt`. A refresh that finds either one different drops the mark, so any push, review, comment or check failure brings the pull request back.
 - **Discuss and Fix:** the worker finds the Orca project whose remote matches the pull request repository and runs `orca worktree create` with the agent from Settings.
 
 ### Agent sessions

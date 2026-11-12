@@ -35,22 +35,6 @@ async function assertAgentInstalled(agent) {
 }
 
 /**
- * Build the prompt that asks the agent to review the pull request state and propose fixes.
- */
-
-function buildFixPrompt(pullRequest) {
-  const reference = `${pullRequest.repository}#${pullRequest.number}`;
-
-  return [
-    `Check the current state of pull request ${pullRequest.url} (${reference}: "${pullRequest.title}").`,
-    `This workspace starts from the pull request head (\`${pullRequest.headBranch}\`) on a new local branch.`,
-    `Use \`gh pr view ${pullRequest.number} --repo ${pullRequest.repository} --comments\`, \`gh pr checks ${pullRequest.number} --repo ${pullRequest.repository}\` and the unresolved review threads to find what is blocking it: failing checks, merge conflicts with \`${pullRequest.baseBranch}\`, requested changes and unanswered review comments.`,
-    'Then report what needs fixing and propose the concrete fix for each item.',
-    `Do not commit or push until I approve. When I do, push to the pull request branch with \`git push origin HEAD:${pullRequest.headBranch}\`.`
-  ].join('\n\n');
-}
-
-/**
  * Find the Orca project that is a checkout of the pull request repository.
  */
 
@@ -67,10 +51,18 @@ async function findRepository(pullRequest) {
 }
 
 /**
- * Open a clean workspace in the pull request project, with the given agent, named after the pull request.
+ * Return the prompt arguments for a workspace, or none when the prompt is empty.
  */
 
-export async function createDiscussWorkspace(pullRequest, agent) {
+function promptArguments(prompt) {
+  return prompt.trim() ? ['--prompt', prompt] : [];
+}
+
+/**
+ * Open a clean workspace in the pull request project, with the given agent and prompt, named after the pull request.
+ */
+
+export async function createDiscussWorkspace(pullRequest, agent, prompt) {
   await assertAgentInstalled(agent);
 
   const repository = await findRepository(pullRequest);
@@ -81,6 +73,7 @@ export async function createDiscussWorkspace(pullRequest, agent) {
     '--name', pullRequest.title,
     '--no-parent',
     '--agent', agent,
+    ...promptArguments(prompt),
     '--reference', pullRequest.url,
     '--activate',
     '--json'
@@ -88,10 +81,10 @@ export async function createDiscussWorkspace(pullRequest, agent) {
 }
 
 /**
- * Open a workspace on the pull request head, with the given agent, and send it the fix prompt.
+ * Open a workspace on the pull request head, with the given agent and prompt, named after the pull request.
  */
 
-export async function createFixWorkspace(pullRequest, agent) {
+export async function createFixWorkspace(pullRequest, agent, prompt) {
   await assertAgentInstalled(agent);
 
   const repository = await findRepository(pullRequest);
@@ -105,9 +98,23 @@ export async function createFixWorkspace(pullRequest, agent) {
     '--no-parent',
     '--base-branch', `origin/${pullRequest.headBranch}`,
     '--agent', agent,
-    '--prompt', buildFixPrompt(pullRequest),
+    ...promptArguments(prompt),
     '--reference', pullRequest.url,
     '--activate',
     '--json'
   ]);
+}
+
+/**
+ * Open the most recently active workspace linked to the pull request.
+ */
+
+export function resumeWorkspace(pullRequest) {
+  const [worktree] = pullRequest.worktrees;
+
+  if (!worktree) {
+    throw new Error('No workspace linked to this pull request');
+  }
+
+  return runJsonCommand('orca', ['worktree', 'activate', '--worktree', `id:${worktree.id}`, '--json']);
 }
