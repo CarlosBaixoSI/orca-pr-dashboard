@@ -110,12 +110,15 @@
   .menu button svg { color: var(--muted); }
   .menu button:hover { background: var(--tint-strong); color: var(--foreground); }
   .menu button:hover svg { color: var(--foreground); }
+  .menu button.nested { padding-left: 30px; }
+  .menu button.owner { font-weight: 600; }
   .menu hr { border: 0; border-top: 1px solid var(--border); margin: 4px 0; }
   .meta { align-items: center; color: var(--muted); display: flex; gap: 12px; }
   .meta button { font-size: 12px; padding: 2px 4px; }
   .next-move { align-items: center; color: var(--muted); display: inline-flex; font-size: 11px; gap: 5px; }
   .next-move strong { color: var(--secondary); font-weight: 500; }
   .next-move.you { background: var(--accent); border-radius: 4px; color: var(--accent-foreground); font-weight: 600; padding: 1px 8px; }
+  .next-move.handled strong { color: var(--green); }
   .next-move.you strong { background: color-mix(in srgb, var(--accent-foreground) 10%, transparent); border-radius: 3px; color: inherit; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; padding: 0 4px; text-transform: uppercase; }
   .number { color: var(--muted); font-family: var(--font-mono); font-size: 12px; margin-left: 8px; }
   .pull-request { align-items: flex-start; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; box-shadow: var(--inset); display: grid; gap: 0 10px; grid-template-columns: auto minmax(0, 1fr) auto; margin: 0 14px 6px; padding: 10px 12px; transition: background-color 0.15s, border-color 0.15s; }
@@ -192,7 +195,9 @@
     copy: '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
     externalLink: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
     eye: '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
+    checkCircle: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
     filter: '<path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>',
+    minus: '<path d="M5 12h14"/>',
     orca: '<circle cx="12" cy="12" r="9"/><path d="m10 9 5 3-5 3V9z" fill="currentColor"/>',
     pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>',
     play: '<path d="M6 3v18l14-9z"/>',
@@ -206,7 +211,7 @@
   };
   const FILTER_KEY = 'filter';
   const Filter = { All: 'all', Muted: 'muted', MyMove: 'my-move', Waiting: 'waiting' };
-  const MenuAction = { CopyLink: 'copy-link', Discuss: 'discuss', Fix: 'fix', Mute: 'mute', OpenInBrowser: 'open-in-browser', OpenInOrca: 'open-in-orca', Resume: 'resume' };
+  const MenuAction = { CopyLink: 'copy-link', Discuss: 'discuss', Fix: 'fix', Handled: 'handled', Mute: 'mute', OpenInBrowser: 'open-in-browser', OpenInOrca: 'open-in-orca', Resume: 'resume' };
   const ORCA_PLUGIN = window.orca?.plugin ?? null;
   const OWNERS = { checks: ['', ICONS.clock, 'Checks'], reviewers: ['', ICONS.eye, 'Reviewers'], you: ['you', null, 'You'] };
   const PLACEHOLDERS = ['baseBranch', 'headBranch', 'number', 'reference', 'repository', 'title', 'url'];
@@ -232,6 +237,14 @@
   function closeDialog() {
     document.getElementById('dialog').close();
     dialogLaunch = null;
+  }
+
+  /**
+   * Check whether a pull request can be marked as handled: the next move is yours, or it is already handled.
+   */
+
+  function canBeHandled(pullRequest) {
+    return pullRequest.isHandled || (pullRequest.nextMove.owner === 'you' && !pullRequest.isDraft);
   }
 
   /**
@@ -290,11 +303,35 @@
   }
 
   /**
+   * Group repository names by their owner, both sorted.
+   */
+
+  function groupByOwner(repositories) {
+    const groups = new Map();
+
+    for (const repository of [...repositories].sort()) {
+      const owner = repository.split('/')[0];
+
+      groups.set(owner, [...(groups.get(owner) ?? []), repository]);
+    }
+
+    return groups;
+  }
+
+  /**
    * Render an icon.
    */
 
   function icon(paths) {
     return `<svg viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`;
+  }
+
+  /**
+   * List every repository with an open pull request, plus any still selected.
+   */
+
+  function listRepositories() {
+    return [...new Set([...(state?.dashboard?.pullRequests.map(pullRequest => pullRequest.repository) ?? []), ...selectedRepositories])].sort();
   }
 
   /**
@@ -466,7 +503,11 @@
     }
 
     chips.push(`<span class="arrow">${icon(ICONS.arrow)}</span>`);
-    chips.push(`<span class="next-move ${ownerKind}">${ownerIcon ? icon(ownerIcon) : ''}<strong>${escapeHtml(ownerLabel)}</strong>${escapeHtml(pullRequest.nextMove.reason)}</span>`);
+    chips.push(
+      pullRequest.isHandled
+        ? `<span class="next-move handled" title="Handled until the pull request changes">${icon(ICONS.checkCircle)}<strong>Handled</strong>${escapeHtml(pullRequest.nextMove.reason)}</span>`
+        : `<span class="next-move ${ownerKind}">${ownerIcon ? icon(ownerIcon) : ''}<strong>${escapeHtml(ownerLabel)}</strong>${escapeHtml(pullRequest.nextMove.reason)}</span>`
+    );
 
     return `<div class="chips">${chips.join('')}</div>`;
   }
@@ -522,6 +563,7 @@
       [MenuAction.Fix, ICONS.wrench, 'Fix'],
       null,
       [MenuAction.CopyLink, ICONS.copy, 'Copy PR link'],
+      ...(canBeHandled(pullRequest) ? [pullRequest.isHandled ? [MenuAction.Handled, ICONS.checkCircle, 'Unmark as handled'] : [MenuAction.Handled, ICONS.checkCircle, 'Mark as handled']] : []),
       pullRequest.isMuted ? [MenuAction.Mute, ICONS.bell, 'Unmute notifications'] : [MenuAction.Mute, ICONS.bellOff, 'Mute notifications']
     ];
 
@@ -546,21 +588,36 @@
 
   function renderRepositoryFilter() {
     const button = document.getElementById('repository-filter');
-    const label = selectedRepositories.size === 0 ? 'All repositories' : selectedRepositories.size === 1 ? [...selectedRepositories][0].split('/').pop() : `${selectedRepositories.size} repositories`;
+    const selectedOwners = [...groupByOwner(selectedRepositories).keys()];
+    const wholeOwner = selectedOwners.length === 1 && listRepositories().filter(repository => repository.startsWith(`${selectedOwners[0]}/`)).every(repository => selectedRepositories.has(repository));
+    const label = selectedRepositories.size === 0
+      ? 'All repositories'
+      : selectedRepositories.size === 1
+        ? [...selectedRepositories][0].split('/').pop()
+        : wholeOwner
+          ? `${selectedOwners[0]}/*`
+          : `${selectedRepositories.size} repositories`;
 
     button.classList.toggle('active', selectedRepositories.size > 0);
     button.innerHTML = `${icon(ICONS.filter)}${escapeHtml(label)}`;
   }
 
   /**
-   * Render the repository filter menu: every repository with an open pull request, plus any still selected.
+   * Render the repository filter menu: each owner, which toggles all its repositories, followed by its repositories.
+   * An owner shows a check when all its repositories are selected, and a dash when only some are.
    */
 
   function renderRepositoryMenu() {
-    const repositories = [...new Set([...(state?.dashboard?.pullRequests.map(pullRequest => pullRequest.repository) ?? []), ...selectedRepositories])].sort();
-    const options = repositories.map(repository => `<button type="button" data-repository-option="${escapeHtml(repository)}">${icon(selectedRepositories.has(repository) ? ICONS.check : '')}${escapeHtml(repository)}</button>`);
+    const options = [...groupByOwner(listRepositories())].map(([owner, repositories]) => {
+      const selectedCount = repositories.filter(repository => selectedRepositories.has(repository)).length;
+      const ownerIcon = selectedCount === repositories.length ? ICONS.check : selectedCount > 0 ? ICONS.minus : '';
 
-    return `<button type="button" data-repository-option="">${icon(selectedRepositories.size === 0 ? ICONS.check : '')}All repositories</button>${options.length ? '<hr>' : ''}${options.join('')}`;
+      return `<button type="button" class="owner" data-owner-option="${escapeHtml(owner)}">${icon(ownerIcon)}${escapeHtml(owner)}</button>${repositories
+        .map(repository => `<button type="button" class="nested" data-repository-option="${escapeHtml(repository)}">${icon(selectedRepositories.has(repository) ? ICONS.check : '')}${escapeHtml(repository.slice(owner.length + 1))}</button>`)
+        .join('')}`;
+    });
+
+    return `<button type="button" data-repository-option="">${icon(selectedRepositories.size === 0 ? ICONS.check : '')}All repositories</button>${options.length ? '<hr>' : ''}${options.join('<hr>')}`;
   }
 
   /**
@@ -586,6 +643,7 @@
         ${pullRequest.worktrees.length ? `<button type="button" class="resume" data-action="resume" data-url="${escapeHtml(pullRequest.url)}" title="Open ${escapeHtml(pullRequest.worktrees[0].name)}">${icon(ICONS.play)}Resume</button>` : ''}
         <span class="cost" title="Estimated from linked agent transcripts">${formatCost(pullRequest.cost)}</span>
         <button type="button" data-action="sessions" data-url="${escapeHtml(pullRequest.url)}" title="Linked sessions">${icon(ICONS.sessions)}${pullRequest.sessions.length}</button>
+        ${canBeHandled(pullRequest) ? `<button type="button" data-action="handled" data-url="${escapeHtml(pullRequest.url)}" data-handled="${pullRequest.isHandled}" title="${pullRequest.isHandled ? 'Unmark as handled' : 'Mark as handled until the pull request changes'}">${icon(pullRequest.isHandled ? ICONS.checkCircle : ICONS.check)}</button>` : ''}
         <button type="button" data-action="mute" data-url="${escapeHtml(pullRequest.url)}" data-muted="${pullRequest.isMuted}" title="${pullRequest.isMuted ? 'Unmute' : 'Mute'}">${icon(pullRequest.isMuted ? ICONS.bellOff : ICONS.bell)}</button>
       </div>
       ${sessions}
@@ -661,6 +719,7 @@
       'prompts.get': ['GET', '/api/prompts'],
       'prompts.save': ['POST', '/api/prompts'],
       'pull-request.action': ['POST', '/api/action'],
+      'pull-request.handled': ['POST', '/api/handled'],
       'pull-request.mute': ['POST', '/api/mute'],
       'pull-request.prompt': ['POST', '/api/prompt']
     };
@@ -704,6 +763,12 @@
    */
 
   function runMenuAction(action, pullRequest) {
+    if (action === MenuAction.Handled) {
+      setHandled(pullRequest.url, !pullRequest.isHandled);
+
+      return;
+    }
+
     if (action === MenuAction.Mute) {
       load('pull-request.mute', { muted: !pullRequest.isMuted, url: pullRequest.url });
 
@@ -761,6 +826,34 @@
   }
 
   /**
+   * Mark a pull request as handled, or unmark it. Marking refreshes the pull requests first, so it tells the user it is working.
+   */
+
+  async function setHandled(url, handled) {
+    if (handled) {
+      showToast('Marking as handled…');
+    }
+
+    try {
+      state = await request('pull-request.handled', { handled, url });
+      render();
+      showToast(handled ? 'Handled until the pull request changes.' : 'No longer handled.');
+    } catch (error) {
+      showToast(error.message, true);
+    }
+  }
+
+  /**
+   * Save the repository filter selection and show it in the menu and the list.
+   */
+
+  function saveRepositorySelection() {
+    writeList(SELECTED_REPOSITORIES_KEY, selectedRepositories);
+    document.getElementById('repositories').innerHTML = renderRepositoryMenu();
+    render();
+  }
+
+  /**
    * Show the prompt dialog with the given content.
    */
 
@@ -804,6 +897,21 @@
   }
 
   /**
+   * Select every repository of an owner in the repository filter, or deselect them all when they already are.
+   */
+
+  function toggleOwner(owner) {
+    const repositories = listRepositories().filter(repository => repository.startsWith(`${owner}/`));
+    const isSelected = repositories.every(repository => selectedRepositories.has(repository));
+
+    for (const repository of repositories) {
+      isSelected ? selectedRepositories.delete(repository) : selectedRepositories.add(repository);
+    }
+
+    saveRepositorySelection();
+  }
+
+  /**
    * Toggle a repository in the repository filter, or clear the filter when none is given.
    */
 
@@ -816,9 +924,7 @@
       selectedRepositories.add(repository);
     }
 
-    writeList(SELECTED_REPOSITORIES_KEY, selectedRepositories);
-    document.getElementById('repositories').innerHTML = renderRepositoryMenu();
-    render();
+    saveRepositorySelection();
   }
 
   /**
@@ -853,6 +959,12 @@
 
     if (button?.dataset.dialog) {
       DIALOG_ACTIONS[button.dataset.dialog]();
+
+      return;
+    }
+
+    if (button?.dataset.ownerOption) {
+      toggleOwner(button.dataset.ownerOption);
 
       return;
     }
@@ -933,6 +1045,12 @@
     if (button.dataset.action === 'sessions') {
       expandedSessions.has(button.dataset.url) ? expandedSessions.delete(button.dataset.url) : expandedSessions.add(button.dataset.url);
       render();
+
+      return;
+    }
+
+    if (button.dataset.action === 'handled') {
+      setHandled(button.dataset.url, button.dataset.handled !== 'true');
 
       return;
     }

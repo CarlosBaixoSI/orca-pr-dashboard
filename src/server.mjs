@@ -62,7 +62,7 @@ function listen(server, preferredPort) {
  * Every API call must carry the session token, and the host header must be local, to block other websites.
  */
 
-export async function startServer({ getState, onAction, onGetPrompts, onMute, onPrompt, onRefresh, onSavePrompts, preferredPort, token }) {
+export async function startServer({ getState, onAction, onGetPrompts, onHandled, onMute, onPrompt, onRefresh, onSavePrompts, preferredPort, token }) {
   let port = preferredPort;
 
   const server = createServer(async (request, response) => {
@@ -106,6 +106,12 @@ export async function startServer({ getState, onAction, onGetPrompts, onMute, on
 
       if (request.method === 'POST' && url.pathname === '/api/prompts') {
         return sendJson(response, 200, await onSavePrompts(await readJsonBody(request)));
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/handled') {
+        const { handled, url: pullRequestUrl } = await readJsonBody(request);
+
+        return sendJson(response, 200, await onHandled(String(pullRequestUrl), Boolean(handled)));
       }
 
       if (request.method === 'POST' && url.pathname === '/api/mute') {

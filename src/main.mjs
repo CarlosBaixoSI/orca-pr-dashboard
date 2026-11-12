@@ -1,4 +1,4 @@
-import { applyMutes, buildDashboard } from './dashboard.mjs';
+import { applyMarks, buildDashboard, getHandledSignature } from './dashboard.mjs';
 import { createDiscussWorkspace, createFixWorkspace, resumeWorkspace } from './workspaces.mjs';
 import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
@@ -19,7 +19,7 @@ const RUNTIME = { dashboard: null, error: null, refreshing: null, server: null, 
 const STATUS_BAR_ITEM_ID = 'attention';
 const STATUS_FILE_PATH = join(homedir(), '.cache', 'orca-pr-dashboard', 'status.json');
 const SettingKey = { Agent: 'agent' };
-const StorageKey = { MutedUrls: 'mutedUrls', NotifiedSignatures: 'notifiedSignatures', Prompts: 'prompts', Token: 'token' };
+const StorageKey = { HandledSignatures: 'handledSignatures', MutedUrls: 'mutedUrls', NotifiedSignatures: 'notifiedSignatures', Prompts: 'prompts', Token: 'token' };
 
 /**
  * Find this plugin's key, which Orca derives from where it was installed from.
@@ -146,6 +146,50 @@ export default async function activate(context) {
   }
 
   /**
+   * Read the handled signatures and the muted pull requests.
+   */
+
+  async function readMarks() {
+    return {
+      handledSignatures: (await storage.get(StorageKey.HandledSignatures)) ?? {},
+      mutedUrls: new Set((await storage.get(StorageKey.MutedUrls)) ?? [])
+    };
+  }
+
+  /**
+   * Forget the handled marks of pull requests that changed or are no longer open.
+   * The saved marks are read again, so a mark saved while the dashboard was being built is kept.
+   */
+
+  async function pruneHandledSignatures(dashboard) {
+    const byUrl = new Map(dashboard.pullRequests.map(pullRequest => [pullRequest.url, pullRequest]));
+    const handledSignatures = (await storage.get(StorageKey.HandledSignatures)) ?? {};
+    const kept = Object.fromEntries(
+      Object.entries(handledSignatures).filter(([url, signature]) => byUrl.has(url) && getHandledSignature(byUrl.get(url)) === signature)
+    );
+
+    if (Object.keys(kept).length !== Object.keys(handledSignatures).length) {
+      await storage.set(StorageKey.HandledSignatures, kept);
+    }
+  }
+
+  /**
+   * Apply the saved marks to the dashboard and show the result everywhere.
+   */
+
+  async function publishMarks() {
+    if (RUNTIME.dashboard) {
+      applyMarks(RUNTIME.dashboard, await readMarks());
+      await writeStatusFile(RUNTIME.dashboard);
+    }
+
+    publishState();
+    await updateStatusBar();
+
+    return getState();
+  }
+
+  /**
    * Read the Discuss and Fix prompt templates, falling back to the default for any not customized.
    */
 
@@ -160,11 +204,10 @@ export default async function activate(context) {
   function refresh() {
     RUNTIME.refreshing ??= (async () => {
       try {
-        const mutedUrls = new Set((await storage.get(StorageKey.MutedUrls)) ?? []);
-
-        RUNTIME.dashboard = await buildDashboard(mutedUrls);
+        RUNTIME.dashboard = await buildDashboard(await readMarks());
         RUNTIME.error = null;
 
+        await pruneHandledSignatures(RUNTIME.dashboard);
         await notifyNewAttention(RUNTIME.dashboard);
         await writeStatusFile(RUNTIME.dashboard);
       } catch (error) {
@@ -277,6 +320,29 @@ export default async function activate(context) {
   }
 
   /**
+   * Mark a pull request as handled until it changes, or unmark it.
+   * The pull requests are refreshed first, so the mark is taken against their latest state.
+   */
+
+  async function setHandled(url, handled) {
+    if (handled) {
+      await refresh();
+    }
+
+    const handledSignatures = (await storage.get(StorageKey.HandledSignatures)) ?? {};
+
+    if (handled) {
+      handledSignatures[url] = getHandledSignature(findPullRequest(url));
+    } else {
+      delete handledSignatures[url];
+    }
+
+    await storage.set(StorageKey.HandledSignatures, handledSignatures);
+
+    return publishMarks();
+  }
+
+  /**
    * Mute or unmute a pull request.
    */
 
@@ -291,21 +357,14 @@ export default async function activate(context) {
 
     await storage.set(StorageKey.MutedUrls, [...mutedUrls]);
 
-    if (RUNTIME.dashboard) {
-      applyMutes(RUNTIME.dashboard, mutedUrls);
-      await writeStatusFile(RUNTIME.dashboard);
-    }
-
-    publishState();
-    await updateStatusBar();
-
-    return getState();
+    return publishMarks();
   }
 
   RUNTIME.server = await startServer({
     getState,
     onAction: runPullRequestAction,
     onGetPrompts: getPrompts,
+    onHandled: setHandled,
     onMute: setMuted,
     onPrompt: getPullRequestPrompt,
     onRefresh: refresh,
@@ -333,6 +392,7 @@ export default async function activate(context) {
   context.panels.handle('prompts.get', () => getPrompts());
   context.panels.handle('prompts.save', input => savePrompts(input));
   context.panels.handle('pull-request.action', ({ action, prompt, url }) => runPullRequestAction(String(action), String(url), typeof prompt === 'string' ? prompt : undefined));
+  context.panels.handle('pull-request.handled', ({ handled, url }) => setHandled(String(url), Boolean(handled)));
   context.panels.handle('pull-request.mute', ({ muted, url }) => setMuted(String(url), Boolean(muted)));
   context.panels.handle('pull-request.prompt', ({ action, url }) => getPullRequestPrompt(String(action), String(url)));
   context.log(`Pull requests dashboard on port ${RUNTIME.server.port}`);
