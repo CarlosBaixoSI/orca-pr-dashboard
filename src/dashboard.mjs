@@ -1,17 +1,17 @@
 import { AGENT_NAMES } from './agents/names.mjs';
-import { deriveNextMove, fetchPullRequests, Owner } from './github.mjs';
+import { deriveNextMove, fetchPullRequests, hasNews, Owner } from './github.mjs';
 import { listSessions, listWorktrees } from './sessions.mjs';
 
 /**
  * Mark handled and muted pull requests and recount the ones that need attention.
- * A pull request stays handled only while its handled signature matches the one saved when it was marked.
+ * A pull request stays handled until something new comes round to you after the move it was marked on.
  */
 
-export function applyMarks(dashboard, { handledSignatures, mutedUrls }) {
+export function applyMarks(dashboard, { handledKeys, mutedUrls }) {
   for (const pullRequest of dashboard.pullRequests) {
-    pullRequest.isHandled = handledSignatures[pullRequest.url] === getHandledSignature(pullRequest);
+    pullRequest.isHandled = Object.hasOwn(handledKeys, pullRequest.url) && pullRequest.nextMove.owner === Owner.You && !hasNews(handledKeys[pullRequest.url], pullRequest.nextMove.key);
     pullRequest.isMuted = mutedUrls.has(pullRequest.url);
-    pullRequest.needsAttention = pullRequest.nextMove.owner === Owner.You && !pullRequest.isDraft && !pullRequest.isHandled && !pullRequest.isMuted;
+    pullRequest.needsAttention = pullRequest.nextMove.owner === Owner.You && !pullRequest.isHandled && !pullRequest.isMuted;
   }
 
   dashboard.attentionCount = dashboard.pullRequests.filter(pullRequest => pullRequest.needsAttention).length;
@@ -24,7 +24,7 @@ export function applyMarks(dashboard, { handledSignatures, mutedUrls }) {
  */
 
 export async function buildDashboard(marks) {
-  const [pullRequests, sessions, worktrees] = await Promise.all([
+  const [{ pullRequests, viewerLogin }, sessions, worktrees] = await Promise.all([
     fetchPullRequests(),
     listSessions(),
     listWorktrees().catch(() => [])
@@ -36,10 +36,12 @@ export async function buildDashboard(marks) {
       .filter(worktree => worktree.repository === pullRequest.repository)
       .map(worktree => worktree.path);
 
-    pullRequest.nextMove = deriveNextMove(pullRequest);
+    pullRequest.nextMove = deriveNextMove(pullRequest, viewerLogin, marks.lastWords[pullRequest.url]);
     pullRequest.sessions = findSessions(pullRequest, sessions, repositoryFolders);
     pullRequest.cost = pullRequest.sessions.reduce((total, session) => total + session.cost, 0);
     pullRequest.worktrees = linkedWorktrees.map(worktree => ({ id: worktree.id, name: worktree.name, path: worktree.path }));
+
+    delete pullRequest.activity;
   }
 
   linkStacks(pullRequests);
@@ -88,14 +90,6 @@ function findWorktrees(pullRequest, worktrees) {
             (worktree.branch === pullRequest.headBranch || worktree.linkedPullRequest === pullRequest.number)))
     )
     .sort((first, second) => second.lastActivityAt - first.lastActivityAt);
-}
-
-/**
- * Return what has to stay the same for a pull request to stay handled: the reason of its next move and its last update.
- */
-
-export function getHandledSignature(pullRequest) {
-  return `${pullRequest.nextMove.reason}|${pullRequest.updatedAt}`;
 }
 
 /**
