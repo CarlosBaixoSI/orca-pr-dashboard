@@ -15,7 +15,7 @@ export async function listSessions() {
 }
 
 /**
- * List the Orca worktrees with their repository and branch.
+ * List the Orca worktrees with their repository, branch and linked pull requests.
  */
 
 export async function listWorktrees() {
@@ -24,7 +24,11 @@ export async function listWorktrees() {
 
   return worktrees.map(worktree => ({
     branch: worktree.branch?.replace(/^refs\/heads\//, '') ?? null,
+    id: worktree.id,
+    isArchived: Boolean(worktree.isArchived),
+    lastActivityAt: worktree.lastActivityAt ?? 0,
     linkedPullRequest: worktree.linkedPR,
+    linkedPullRequestUrls: (worktree.linkedItems ?? []).filter(item => item.type === 'pr').map(item => item.url),
     name: worktree.displayName,
     path: worktree.path,
     repository: worktree.projectId?.replace(/^github:/, '') ?? null

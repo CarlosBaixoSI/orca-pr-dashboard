@@ -3,13 +3,15 @@ import { deriveNextMove, fetchPullRequests, Owner } from './github.mjs';
 import { listSessions, listWorktrees } from './sessions.mjs';
 
 /**
- * Mark muted pull requests and recount the ones that need attention.
+ * Mark handled and muted pull requests and recount the ones that need attention.
+ * A pull request stays handled only while its handled signature matches the one saved when it was marked.
  */
 
-export function applyMutes(dashboard, mutedUrls) {
+export function applyMarks(dashboard, { handledSignatures, mutedUrls }) {
   for (const pullRequest of dashboard.pullRequests) {
+    pullRequest.isHandled = handledSignatures[pullRequest.url] === getHandledSignature(pullRequest);
     pullRequest.isMuted = mutedUrls.has(pullRequest.url);
-    pullRequest.needsAttention = pullRequest.nextMove.owner === Owner.You && !pullRequest.isDraft && !pullRequest.isMuted;
+    pullRequest.needsAttention = pullRequest.nextMove.owner === Owner.You && !pullRequest.isDraft && !pullRequest.isHandled && !pullRequest.isMuted;
   }
 
   dashboard.attentionCount = dashboard.pullRequests.filter(pullRequest => pullRequest.needsAttention).length;
@@ -21,7 +23,7 @@ export function applyMutes(dashboard, mutedUrls) {
  * Build the dashboard state: pull requests with next move, attention flag, worktrees, sessions and stacks.
  */
 
-export async function buildDashboard(mutedUrls) {
+export async function buildDashboard(marks) {
   const [pullRequests, sessions, worktrees] = await Promise.all([
     fetchPullRequests(),
     listSessions(),
@@ -37,12 +39,12 @@ export async function buildDashboard(mutedUrls) {
     pullRequest.nextMove = deriveNextMove(pullRequest);
     pullRequest.sessions = findSessions(pullRequest, sessions, repositoryFolders);
     pullRequest.cost = pullRequest.sessions.reduce((total, session) => total + session.cost, 0);
-    pullRequest.worktrees = linkedWorktrees.map(worktree => ({ name: worktree.name, path: worktree.path }));
+    pullRequest.worktrees = linkedWorktrees.map(worktree => ({ id: worktree.id, name: worktree.name, path: worktree.path }));
   }
 
   linkStacks(pullRequests);
 
-  return applyMutes({ pullRequests, refreshedAt: new Date().toISOString() }, mutedUrls);
+  return applyMarks({ pullRequests, refreshedAt: new Date().toISOString() }, marks);
 }
 
 /**
@@ -73,15 +75,27 @@ function findSessions(pullRequest, sessions, repositoryFolders) {
 }
 
 /**
- * Find the Orca worktrees checked out on a pull request branch.
+ * Find the Orca worktrees that are not archived and are checked out on, or linked to, a pull request, most recently active first.
  */
 
 function findWorktrees(pullRequest, worktrees) {
-  return worktrees.filter(
-    worktree =>
-      worktree.repository === pullRequest.repository &&
-      (worktree.branch === pullRequest.headBranch || worktree.linkedPullRequest === pullRequest.number)
-  );
+  return worktrees
+    .filter(
+      worktree =>
+        !worktree.isArchived &&
+        (worktree.linkedPullRequestUrls.includes(pullRequest.url) ||
+          (worktree.repository === pullRequest.repository &&
+            (worktree.branch === pullRequest.headBranch || worktree.linkedPullRequest === pullRequest.number)))
+    )
+    .sort((first, second) => second.lastActivityAt - first.lastActivityAt);
+}
+
+/**
+ * Return what has to stay the same for a pull request to stay handled: the reason of its next move and its last update.
+ */
+
+export function getHandledSignature(pullRequest) {
+  return `${pullRequest.nextMove.reason}|${pullRequest.updatedAt}`;
 }
 
 /**
