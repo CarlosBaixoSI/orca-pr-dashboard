@@ -124,6 +124,7 @@
   .pull-request { align-items: flex-start; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; box-shadow: var(--inset); display: grid; gap: 0 10px; grid-template-columns: auto minmax(0, 1fr) auto; margin: 0 14px 6px; padding: 10px 12px; transition: background-color 0.15s, border-color 0.15s; }
   .pull-request:hover { background: var(--surface-hover); border-color: var(--border-strong); }
   .pull-request > div { min-width: 0; }
+  .pull-request.needs-you, .pull-request.needs-you:hover { border-color: color-mix(in srgb, var(--accent) 60%, transparent); box-shadow: inset 3px 0 0 var(--accent), 0 0 18px -4px color-mix(in srgb, var(--accent) 45%, transparent); }
   .pull-request.muted { opacity: 0.5; }
   .primary { background: var(--accent); color: var(--accent-foreground); font-size: 12px; font-weight: 600; padding: 4px 12px; }
   .primary:hover { color: var(--accent-foreground); opacity: 0.9; }
@@ -213,7 +214,7 @@
   const Filter = { All: 'all', Muted: 'muted', MyMove: 'my-move', Waiting: 'waiting' };
   const MenuAction = { CopyLink: 'copy-link', Discuss: 'discuss', Fix: 'fix', Handled: 'handled', Mute: 'mute', OpenInBrowser: 'open-in-browser', OpenInOrca: 'open-in-orca', Resume: 'resume' };
   const ORCA_PLUGIN = window.orca?.plugin ?? null;
-  const OWNERS = { checks: ['', ICONS.clock, 'Checks'], reviewers: ['', ICONS.eye, 'Reviewers'], you: ['you', null, 'You'] };
+  const OWNERS = { author: ['', ICONS.eye, 'Author'], reviewers: ['', ICONS.eye, 'Reviewers'], you: ['you', null, 'You'] };
   const PLACEHOLDERS = ['baseBranch', 'headBranch', 'number', 'reference', 'repository', 'title', 'url'];
   const POLL_MILLISECONDS = 30000;
   const SELECTED_REPOSITORIES_KEY = 'selectedRepositories';
@@ -244,7 +245,7 @@
    */
 
   function canBeHandled(pullRequest) {
-    return pullRequest.isHandled || (pullRequest.nextMove.owner === 'you' && !pullRequest.isDraft);
+    return pullRequest.isHandled || pullRequest.nextMove.owner === 'you';
   }
 
   /**
@@ -482,6 +483,10 @@
     const review = { APPROVED: ['green', 'Approved'], CHANGES_REQUESTED: ['red', 'Changes requested'], REVIEW_REQUIRED: ['outline', 'Review required'] }[pullRequest.reviewDecision];
     const chips = [];
 
+    if (!pullRequest.isMine) {
+      chips.push(renderChip('outline', `Review · ${pullRequest.author ?? 'unknown'}`, ICONS.eye));
+    }
+
     if (pullRequest.isDraft) {
       chips.push(renderChip('outline', 'Draft'));
     }
@@ -498,14 +503,10 @@
       chips.push(renderChip('red', 'Conflicts'));
     }
 
-    if (pullRequest.threadsAwaitingReply > 0) {
-      chips.push(renderChip('mono', pullRequest.threadsAwaitingReply, ICONS.comment));
-    }
-
     chips.push(`<span class="arrow">${icon(ICONS.arrow)}</span>`);
     chips.push(
       pullRequest.isHandled
-        ? `<span class="next-move handled" title="Handled until the pull request changes">${icon(ICONS.checkCircle)}<strong>Handled</strong>${escapeHtml(pullRequest.nextMove.reason)}</span>`
+        ? `<span class="next-move handled" title="Handled until something new comes round to you">${icon(ICONS.checkCircle)}<strong>Handled</strong>${escapeHtml(pullRequest.nextMove.reason)}</span>`
         : `<span class="next-move ${ownerKind}">${ownerIcon ? icon(ownerIcon) : ''}<strong>${escapeHtml(ownerLabel)}</strong>${escapeHtml(pullRequest.nextMove.reason)}</span>`
     );
 
@@ -633,7 +634,7 @@
       : '';
     const shortRepository = pullRequest.repository.split('/').pop();
 
-    return `<article class="pull-request ${pullRequest.isMuted ? 'muted' : ''}" style="margin-left: ${14 + depth * 30}px">
+    return `<article class="pull-request ${pullRequest.isMuted ? 'muted' : ''} ${pullRequest.needsAttention ? 'needs-you' : ''}" style="margin-left: ${14 + depth * 30}px">
       <span class="kind">${icon(depth > 0 ? ICONS.stacked : ICONS.pullRequest)}</span>
       <div>
         <a class="title" href="${escapeHtml(pullRequest.url)}" target="_blank" rel="noreferrer" data-url="${escapeHtml(pullRequest.url)}">${escapeHtml(pullRequest.title)}</a><span class="number">${escapeHtml(shortRepository)}#${pullRequest.number}</span>
@@ -643,7 +644,7 @@
         ${pullRequest.worktrees.length ? `<button type="button" class="resume" data-action="resume" data-url="${escapeHtml(pullRequest.url)}" title="Open ${escapeHtml(pullRequest.worktrees[0].name)}">${icon(ICONS.play)}Resume</button>` : ''}
         <span class="cost" title="Estimated from linked agent transcripts">${formatCost(pullRequest.cost)}</span>
         <button type="button" data-action="sessions" data-url="${escapeHtml(pullRequest.url)}" title="Linked sessions">${icon(ICONS.sessions)}${pullRequest.sessions.length}</button>
-        ${canBeHandled(pullRequest) ? `<button type="button" data-action="handled" data-url="${escapeHtml(pullRequest.url)}" data-handled="${pullRequest.isHandled}" title="${pullRequest.isHandled ? 'Unmark as handled' : 'Mark as handled until the pull request changes'}">${icon(pullRequest.isHandled ? ICONS.checkCircle : ICONS.check)}</button>` : ''}
+        ${canBeHandled(pullRequest) ? `<button type="button" data-action="handled" data-url="${escapeHtml(pullRequest.url)}" data-handled="${pullRequest.isHandled}" title="${pullRequest.isHandled ? 'Unmark as handled' : 'Mark as handled until something new comes round to you'}">${icon(pullRequest.isHandled ? ICONS.checkCircle : ICONS.check)}</button>` : ''}
         <button type="button" data-action="mute" data-url="${escapeHtml(pullRequest.url)}" data-muted="${pullRequest.isMuted}" title="${pullRequest.isMuted ? 'Unmute' : 'Mute'}">${icon(pullRequest.isMuted ? ICONS.bellOff : ICONS.bell)}</button>
       </div>
       ${sessions}
@@ -837,7 +838,7 @@
     try {
       state = await request('pull-request.handled', { handled, url });
       render();
-      showToast(handled ? 'Handled until the pull request changes.' : 'No longer handled.');
+      showToast(handled ? 'Handled until something new comes round to you.' : 'No longer handled.');
     } catch (error) {
       showToast(error.message, true);
     }

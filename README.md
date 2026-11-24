@@ -1,6 +1,6 @@
 # Pull Requests Dashboard for Orca
 
-See every open pull request you own in one place: what state it is in, who has to move next and what the AI sessions behind it cost. From there, one click gets an agent working on it.
+See every open pull request you wrote, reviewed or were asked to review in one place: what state it is in, who has to move next and what the AI sessions behind it cost. From there, one click gets an agent working on it.
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/dashboard-light.png">
@@ -11,14 +11,14 @@ See every open pull request you own in one place: what state it is in, who has t
 
 ## Features
 
-- **Status at a glance:** checks, review decision, merge conflicts and unreplied review threads as chips.
-- **Next move:** who has to act (you, reviewers or checks) and why, such as "Resolve merge conflicts" or "Waiting for Platform Codeowners".
+- **Status at a glance:** checks, review decision, merge conflicts and draft as chips, and the author on pull requests you review.
+- **Next move:** whoever spoke last. It is your move when someone else comments, reviews or pushes after your last word, or when your review is requested, with why, such as "Approved by alice · 2 comments from bob". Otherwise it waits on the reviewers or the author. Bots are ignored.
 - **Grouped and stacked:** pull requests are grouped by repository, and a pull request based on another open one is nested under it.
 - **Session cost:** estimated from the token usage in the linked Claude Code and Codex transcripts, per pull request and in total.
 - **Linked sessions:** the Orca worktrees on the pull request branch and the Claude Code and Codex sessions that worked on it.
 - **Filters:** All, My move, Waiting and Muted. Muted pull requests are never counted or notified.
 - **Search and repository filter:** find a pull request by title or number (`123` or `#123`), and show only the repositories you pick. Repositories are grouped by owner, and clicking an owner selects or clears all its repositories.
-- **Handled:** mark a pull request whose next move is yours as handled, such as after addressing requested changes and re-requesting a review while leaving threads for the reviewer to resolve. It stops needing your attention until its next move or anything on GitHub changes.
+- **Handled:** mark a pull request whose next move is yours as handled, such as after addressing requested changes and re-requesting a review while leaving threads for the reviewer to resolve. It stops needing your attention until something new comes round to you: a new comment or review from someone else, a push or a new review request.
 - **Collapsible repositories:** click a repository header to collapse or expand its pull requests. Every repository is expanded while searching.
 - **Resume:** a pull request with a linked Orca workspace gets a Resume button that opens its most recently active one.
 - **Status bar chip:** how many pull requests need you, always visible in Orca. Click it to open the sidebar panel.
@@ -121,7 +121,8 @@ The background worker polls `gh` every 3 minutes, links each pull request to its
 - **Browser tab:** the worker serves the page on `127.0.0.1:47213`. API calls require a per-install token and a local `Host` header.
 - **Sidebar panel:** the same page talks to the worker through `orca.plugin.request`, since panel frames cannot reach the local server, and updates on every refresh.
 - **Status bar:** the worker updates the chip with `statusBar.update` after every refresh, mute and handled mark.
-- **Handled:** marking refreshes the pull request first, then saves its next move reason and GitHub `updatedAt`. A refresh that finds either one different drops the mark, so any push, review, comment or check failure brings the pull request back.
+- **Next move:** your last word is the newest of your reviews, comments and pushes, and the opening of your own pull request. It is saved on every refresh, so a word that falls outside the last 20 comments or reviews GitHub returns still counts. On someone else's pull request, a push counts only against a review of yours that did not approve it.
+- **Handled:** marking refreshes the pull request first, then saves its move key: the pushed head commit, the time of the newest word from someone else and the time of the newest review request. A refresh drops the mark only when one of them is new, so your own activity, bots, labels and check runs never bring the pull request back.
 - **Discuss and Fix:** the worker finds the Orca project whose remote matches the pull request repository and runs `orca worktree create` with the agent from Settings.
 
 ### Agent sessions

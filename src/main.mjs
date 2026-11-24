@@ -1,4 +1,4 @@
-import { applyMarks, buildDashboard, getHandledSignature } from './dashboard.mjs';
+import { applyMarks, buildDashboard } from './dashboard.mjs';
 import { createDiscussWorkspace, createFixWorkspace, resumeWorkspace } from './workspaces.mjs';
 import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
@@ -6,6 +6,7 @@ import { mkdir, rename, writeFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { copyToClipboard, runCommand, runJsonCommand } from './commands.mjs';
 import { DEFAULT_PROMPTS, fillPrompt } from './prompts.mjs';
+import { hasNews, Owner } from './github.mjs';
 import { startServer } from './server.mjs';
 
 const DEFAULT_AGENT = 'claude';
@@ -19,7 +20,7 @@ const RUNTIME = { dashboard: null, error: null, refreshing: null, server: null, 
 const STATUS_BAR_ITEM_ID = 'attention';
 const STATUS_FILE_PATH = join(homedir(), '.cache', 'orca-pr-dashboard', 'status.json');
 const SettingKey = { Agent: 'agent' };
-const StorageKey = { HandledSignatures: 'handledSignatures', MutedUrls: 'mutedUrls', NotifiedSignatures: 'notifiedSignatures', Prompts: 'prompts', Token: 'token' };
+const StorageKey = { HandledKeys: 'handledKeys', LastWords: 'lastWords', MutedUrls: 'mutedUrls', NotifiedSignatures: 'notifiedSignatures', Prompts: 'prompts', Token: 'token' };
 
 /**
  * Find this plugin's key, which Orca derives from where it was installed from.
@@ -69,7 +70,7 @@ export default async function activate(context) {
     const previous = await storage.get(StorageKey.NotifiedSignatures);
     const current = dashboard.pullRequests
       .filter(pullRequest => pullRequest.needsAttention)
-      .map(pullRequest => ({ pullRequest, signature: `${pullRequest.url}|${pullRequest.nextMove.reason}` }));
+      .map(pullRequest => ({ pullRequest, signature: `${pullRequest.url}|${pullRequest.nextMove.key}` }));
     const fresh = previous ? current.filter(item => !previous.includes(item.signature)) : current;
 
     await storage.set(StorageKey.NotifiedSignatures, current.map(item => item.signature));
@@ -146,30 +147,35 @@ export default async function activate(context) {
   }
 
   /**
-   * Read the handled signatures and the muted pull requests.
+   * Read the handled marks, your last word on each pull request and the muted pull requests.
    */
 
   async function readMarks() {
     return {
-      handledSignatures: (await storage.get(StorageKey.HandledSignatures)) ?? {},
+      handledKeys: (await storage.get(StorageKey.HandledKeys)) ?? {},
+      lastWords: (await storage.get(StorageKey.LastWords)) ?? {},
       mutedUrls: new Set((await storage.get(StorageKey.MutedUrls)) ?? [])
     };
   }
 
   /**
-   * Forget the handled marks of pull requests that changed or are no longer open.
+   * Forget the handled marks of pull requests that are no longer open or had something new come round to you.
    * The saved marks are read again, so a mark saved while the dashboard was being built is kept.
    */
 
-  async function pruneHandledSignatures(dashboard) {
+  async function pruneHandledKeys(dashboard) {
     const byUrl = new Map(dashboard.pullRequests.map(pullRequest => [pullRequest.url, pullRequest]));
-    const handledSignatures = (await storage.get(StorageKey.HandledSignatures)) ?? {};
+    const handledKeys = (await storage.get(StorageKey.HandledKeys)) ?? {};
     const kept = Object.fromEntries(
-      Object.entries(handledSignatures).filter(([url, signature]) => byUrl.has(url) && getHandledSignature(byUrl.get(url)) === signature)
+      Object.entries(handledKeys).filter(([url, key]) => {
+        const nextMove = byUrl.get(url)?.nextMove;
+
+        return Boolean(nextMove) && !(nextMove.owner === Owner.You && hasNews(key, nextMove.key));
+      })
     );
 
-    if (Object.keys(kept).length !== Object.keys(handledSignatures).length) {
-      await storage.set(StorageKey.HandledSignatures, kept);
+    if (Object.keys(kept).length !== Object.keys(handledKeys).length) {
+      await storage.set(StorageKey.HandledKeys, kept);
     }
   }
 
@@ -207,7 +213,8 @@ export default async function activate(context) {
         RUNTIME.dashboard = await buildDashboard(await readMarks());
         RUNTIME.error = null;
 
-        await pruneHandledSignatures(RUNTIME.dashboard);
+        await pruneHandledKeys(RUNTIME.dashboard);
+        await saveLastWords(RUNTIME.dashboard);
         await notifyNewAttention(RUNTIME.dashboard);
         await writeStatusFile(RUNTIME.dashboard);
       } catch (error) {
@@ -300,6 +307,17 @@ export default async function activate(context) {
   }
 
   /**
+   * Save your last word on each open pull request, so one that falls out of what GitHub returns still counts.
+   */
+
+  async function saveLastWords(dashboard) {
+    await storage.set(
+      StorageKey.LastWords,
+      Object.fromEntries(dashboard.pullRequests.filter(pullRequest => pullRequest.nextMove.lastWord).map(pullRequest => [pullRequest.url, pullRequest.nextMove.lastWord]))
+    );
+  }
+
+  /**
    * Save the Discuss and Fix prompt templates, keeping only the ones that differ from the default.
    */
 
@@ -320,8 +338,8 @@ export default async function activate(context) {
   }
 
   /**
-   * Mark a pull request as handled until it changes, or unmark it.
-   * The pull requests are refreshed first, so the mark is taken against their latest state.
+   * Mark a pull request as handled until something new comes round to you, or unmark it.
+   * The pull requests are refreshed first, so the mark is taken against their latest move.
    */
 
   async function setHandled(url, handled) {
@@ -329,15 +347,15 @@ export default async function activate(context) {
       await refresh();
     }
 
-    const handledSignatures = (await storage.get(StorageKey.HandledSignatures)) ?? {};
+    const handledKeys = (await storage.get(StorageKey.HandledKeys)) ?? {};
 
     if (handled) {
-      handledSignatures[url] = getHandledSignature(findPullRequest(url));
+      handledKeys[url] = findPullRequest(url).nextMove.key;
     } else {
-      delete handledSignatures[url];
+      delete handledKeys[url];
     }
 
-    await storage.set(StorageKey.HandledSignatures, handledSignatures);
+    await storage.set(StorageKey.HandledKeys, handledKeys);
 
     return publishMarks();
   }
